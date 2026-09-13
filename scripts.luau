@@ -86,7 +86,8 @@ local function triggerServerHop()
 
     for _, server in ipairs(data.data) do
         if server.playing and server.playing >= 1 and server.playing <= 2 then
-            if server.id ~= game.JobId then
+            -- Kiểm tra thêm điều kiện server không bị đóng băng/đầy và khác JobId hiện tại
+            if server.id ~= game.JobId and server.maxPlayers and server.playing < server.maxPlayers then
                 targetServerId = server.id
                 break
             end
@@ -94,11 +95,11 @@ local function triggerServerHop()
     end
 
     if targetServerId then
-        local teleSuccess = pcall(function()
+        local teleSuccess, err = pcall(function()
             game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, targetServerId, game:GetService("Players").LocalPlayer)
         end)
         
-        if not teleSuccess then
+        if not teleSuccess or (err and string.find(tostring(err), "773")) then
             game:GetService("TeleportService"):Teleport(game.PlaceId, game:GetService("Players").LocalPlayer)
         end
     else
