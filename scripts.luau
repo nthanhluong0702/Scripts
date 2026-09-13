@@ -568,7 +568,6 @@ local function scanAndProcessFruits()
                     
                     local storeResult = advancedStoreFruit(obj)
                     if storeResult == "Full" or storeResult == false then
-                        HopModule(fruitName)
                         return true
                     elseif storeResult == true then
                         ScriptStatusBox:SetDesc("Fruit Stored Successfully!")
@@ -594,7 +593,6 @@ local function scanAndProcessFruits()
                         
                         local storeResult = advancedStoreFruit(fruit)
                         if storeResult == "Full" or storeResult == false then
-                            HopModule(fruit.Name)
                             return true
                         elseif storeResult == true then
                             ScriptStatusBox:SetDesc("Fruit Stored Successfully!")
@@ -613,7 +611,6 @@ local function scanAndProcessFruits()
                     FruitStatusBox:SetDesc("Found in backpack: " .. item.Name)
                     local storeResult = advancedStoreFruit(item)
                     if storeResult == "Full" or storeResult == false then
-                        HopModule(item.Name)
                         return true
                     elseif storeResult == true then
                         ScriptStatusBox:SetDesc("Fruit Stored Successfully!")
@@ -625,7 +622,7 @@ local function scanAndProcessFruits()
     end)
     
     if not found then
-        FruitStatusBox:SetDesc("No Fruit Found. Switching server...") 
+        FruitStatusBox:SetDesc("No Fruit Found") 
         if HopModule then
             HopModule.Settings.MinPlayers = 2
             HopModule.Settings.MaxPlayers = 8
