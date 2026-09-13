@@ -37,14 +37,64 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 local LocalPlayer = Players.LocalPlayer
-local PlaceID = game.PlaceId
-local Remotes = ReplicatedStorage:WaitForChild("Remotes", 3)
 local isTeleporting = false
 local isTweening = false
 local currentTween = nil
 local noclipConnection = nil
 local isStoring = false
 local CommF_Cache = nil
+
+local successLoad, ServerHopLib = pcall(function()
+    return loadstring(game:HttpGet("https://raw.githubusercontent.com/nthanhluong0702/Scripts/refs/heads/main/ServerHop.lua"))()
+end)
+
+if not successLoad or not ServerHopLib then
+    warn("[Kaitun System]: Không thể tải ServerHopLib từ GitHub, đang dùng cơ chế dự phòng...")
+    ServerHopLib = {
+        Hop = function(self, maxPlayers)
+            pcall(function()
+                TeleportService:Teleport(PlaceID, LocalPlayer)
+            end)
+        end,
+        FindCleanServer = function(self, maxPlayers)
+            return nil
+        end
+    }
+end
+
+local function triggerServerHop()
+    if isTeleporting then return end
+    isTeleporting = true
+    
+    if ScriptStatusBox then ScriptStatusBox:SetDesc("Đang tìm server sạch...") end
+    
+    pcall(function()
+        local queueTeleport = syn and syn.queue_on_teleport or queue_on_teleport
+        if queueTeleport and Config.Settings.BypassTeleport then
+            queueTeleport([[
+                repeat task.wait() until game:IsLoaded()
+                print("Đã sang server mới thành công!")
+            ]])
+        end
+    end)
+    
+    local targetServer = nil
+    pcall(function()
+        if ServerHopLib.FindCleanServer then
+            targetServer = ServerHopLib:FindCleanServer(2, 0)
+        end
+    end)
+    
+    if targetServer then
+        pcall(function()
+            TeleportService:TeleportToPlaceInstance(PlaceID, targetServer, LocalPlayer)
+        end)
+    else
+        pcall(function()
+            ServerHopLib:Hop(2)
+        end)
+    end
+end
 
 local successUI, Library = pcall(function()
     return loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
@@ -517,7 +567,6 @@ local function collectServerFruit(fruitObj, fruitName)
     local handle = fruitObj.Handle
     local targetCF = handle.CFrame + Vector3.new(0, 3, 0)
     
-    -- Sử dụng hàm tween tối ưu của bạn
     local successTween = optimizedTweenTo(targetCF)
     if not successTween then return false end
     
