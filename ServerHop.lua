@@ -1,113 +1,37 @@
-local HttpService = game:GetService("HttpService")
 local TeleportService = game:GetService("TeleportService")
+local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
-local UltimateHop = {}
-UltimateHop.__index = UltimateHop
+local DirectHop = {}
+DirectHop.__index = DirectHop
 
-UltimateHop.Settings = {
-    MinPlayers = 2,
-    MaxPlayers = 10,
-    SaveHistory = true,
-    FileName = "BloxFruits_UltimateHopHistory.json",
-    DelayBetweenTries = 1.5
-}
-
-local function GetHistory()
-    if not (readfile and writefile) then return {} end
-    local success, result = pcall(function()
-        if not isfile(UltimateHop.Settings.FileName) then
-            writefile(UltimateHop.Settings.FileName, HttpService:JSONEncode({}))
-            return {}
-        end
-        return HttpService:JSONDecode(readfile(UltimateHop.Settings.FileName))
-    end)
-    return success and result or {}
-end
-
-local function SaveHistory(historyTable)
-    if not writefile then return end
-    pcall(function()
-        writefile(UltimateHop.Settings.FileName, HttpService:JSONEncode(historyTable))
-    end)
-end
-
-function UltimateHop:FindBestServer()
-    local placeId = game.PlaceId
-    local cursor = ""
-    local history = GetHistory()
-    
-    if #history > 200 then history = {} end
-
-    for i = 1, 3 do
-        local url = string.format(
-            "https://games.roblox.com/v1/games/%s/servers/Public?sortOrder=Asc&limit=100%s", 
-            placeId, 
-            (cursor ~= "" and "&cursor=" .. cursor or "")
-        )
+function DirectHop:Hop()
+    local pcallSuccess = pcall(function()
+        local servers = {}
+        local req = game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100")
+        local body = HttpService:JSONDecode(req)
         
-        local success, result = pcall(function()
-            return HttpService:JSONDecode(game:HttpGet(url))
-        end)
-
-        if success and result and result.data then
-            for _, server in ipairs(result.data) do
-                if type(server) == "table" and server.id and server.playing and server.maxPlayers then
-                    local serverId = tostring(server.id)
-                    local playerCount = server.playing
-                    local maxPlayers = server.maxPlayers
-
-                    local isCurrent = (serverId == game.JobId)
-                    local isVisited = history[serverId] ~= nil
-                    local isValidCount = (playerCount >= self.Settings.MinPlayers and playerCount <= self.Settings.MaxPlayers)
-                    local hasSpace = (playerCount < maxPlayers)
-
-                    if hasSpace and isValidCount and not isCurrent and not isVisited then
-                        return serverId, history
-                    end
+        if body and body.data then
+            for _, serv in ipairs(body.data) do
+                if type(serv) == "table" and serv.id ~= game.JobId and serv.playing < serv.maxPlayers then
+                    table.insert(servers, serv.id)
                 end
             end
-            
-            if result.nextPageCursor then
-                cursor = result.nextPageCursor
-            else
-                break
-            end
+        end
+        
+        if #servers > 0 then
+            local randomServer = servers[math.random(1, #servers)]
+            TeleportService:TeleportToPlaceInstance(game.PlaceId, randomServer, LocalPlayer)
         else
-            break
+            TeleportService:Teleport(game.PlaceId, LocalPlayer)
         end
-        
-        task.wait(0.5)
-    end
+    end)
 
-    return nil, history
-end
-
-function UltimateHop:Hop()
-    local targetServerId, history = self:FindBestServer()
-
-    if targetServerId then
-        if self.Settings.SaveHistory then
-            history[targetServerId] = true
-            SaveHistory(history)
-        end
-        
-        local success, err = pcall(function()
-            TeleportService:TeleportToPlaceInstance(game.PlaceId, targetServerId, LocalPlayer)
-        end)
-
-        if not success then
-            task.wait(self.Settings.DelayBetweenTries)
-            self:Hop()
-        end
-    else
-        if writefile then
-            pcall(function() writefile(self.Settings.FileName, HttpService:JSONEncode({})) end)
-        end
+    if not pcallSuccess then
         task.wait(2)
-        self:Hop()
+        TeleportService:Teleport(game.PlaceId, LocalPlayer)
     end
 end
 
-return UltimateHop
+return DirectHop
