@@ -64,49 +64,14 @@ if not successLoad or not ServerHopLib then
 end
 
 local function triggerServerHop()
-    local success, response = pcall(function()
-        return game:HttpGet(string.format("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=50", game.PlaceId))
+    local success, err = pcall(function()
+        game:GetService("TeleportService"):Teleport(game.PlaceId, game:GetService("Players").LocalPlayer)
     end)
-
-    if not success or not response then
-        game:GetService("TeleportService"):Teleport(game.PlaceId, game:GetService("Players").LocalPlayer)
-        return
-    end
-
-    local decoded, data = pcall(function()
-        return game:GetService("HttpService"):JSONDecode(response)
-    end)
-
-    if not decoded or not data or not data.data then
-        game:GetService("TeleportService"):Teleport(game.PlaceId, game:GetService("Players").LocalPlayer)
-        return
-    end
-
-    local targetServerId = nil
-
-    for _, server in ipairs(data.data) do
-        if server.playing and server.playing >= 1 and server.playing <= 2 then
-            -- Kiểm tra thêm điều kiện server không bị đóng băng/đầy và khác JobId hiện tại
-            if server.id ~= game.JobId and server.maxPlayers and server.playing < server.maxPlayers then
-                targetServerId = server.id
-                break
-            end
-        end
-    end
-
-    if targetServerId then
-        local teleSuccess, err = pcall(function()
-            game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, targetServerId, game:GetService("Players").LocalPlayer)
-        end)
-        
-        if not teleSuccess or (err and string.find(tostring(err), "773")) then
-            game:GetService("TeleportService"):Teleport(game.PlaceId, game:GetService("Players").LocalPlayer)
-        end
-    else
-        game:GetService("TeleportService"):Teleport(game.PlaceId, game:GetService("Players").LocalPlayer)
+    
+    if not success then
+        warn("[Hop Error]: Không thể đổi server:", err)
     end
 end
-
 local successUI, Library = pcall(function()
     return loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 end)
