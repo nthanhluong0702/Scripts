@@ -66,29 +66,19 @@ local function triggerServerHop()
     if isTeleporting then return end
     isTeleporting = true
     
-    if ScriptStatusBox then ScriptStatusBox:SetDesc("Đang tiến hành đổi server...") end
+    if ScriptStatusBox then ScriptStatusBox:SetDesc("Đang đổi server...") end
     
-    pcall(function()
-        local queueTeleport = syn and syn.queue_on_teleport or queue_on_teleport or (fluxus and fluxus.queue_on_teleport)
-        if queueTeleport and Config.Settings.BypassTeleport then
-            queueTeleport([[
-                repeat task.wait() until game:IsLoaded()
-                print("Đã chuyển server thành công!")
-            ]])
-        end
-    end)
-    
-    local success, err = pcall(function()
-        TeleportService:Teleport(PlaceID, LocalPlayer)
-    end)
-    
-    if not success then
-        warn("[Hop Error]: Không thể teleport:", err)
+    if syn and syn.hop_server then
+        syn.hop_server()
+        return
     end
     
     task.spawn(function()
-        task.wait(6)
-        isTeleporting = false
+        while task.wait(1) do
+            pcall(function()
+                TeleportService:Teleport(PlaceID, LocalPlayer)
+            end)
+        end
     end)
 end
 
