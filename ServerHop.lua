@@ -1,44 +1,46 @@
-local HttpService = game:GetService("HttpService")
 local TeleportService = game:GetService("TeleportService")
+local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
+
 local LocalPlayer = Players.LocalPlayer
+local PlaceId = game.PlaceId
+local CurrentJobId = game.JobId
 
-local SafeServerHop = {}
-SafeServerHop.__index = SafeServerHop
-
-function SafeServerHop:Hop()
-    local success = pcall(function()
-        local currentPlaceId = game.PlaceId
-        local url = string.format("https://games.roblox.com/v1/games/%s/servers/Public?sortOrder=Asc&limit=100", currentPlaceId)
-        
-        local req = game:HttpGet(url)
-        local body = HttpService:JSONDecode(req)
-        
-        if body and body.data then
-            local validServers = {}
-            for _, serv in ipairs(body.data) do
-                if type(serv) == "table" and serv.id and serv.id ~= game.JobId then
-                    if serv.playing and serv.maxPlayers and serv.playing < serv.maxPlayers and serv.playing > 0 then
-                        table.insert(validServers, serv.id)
-                    end
-                end
-            end
-            
-            if #validServers > 0 then
-                local randomServer = validServers[math.random(1, #validServers)]
-                TeleportService:TeleportToPlaceInstance(currentPlaceId, randomServer, LocalPlayer)
-            else
-                TeleportService:Teleport(currentPlaceId, LocalPlayer)
-            end
-        else
-            TeleportService:Teleport(currentPlaceId, LocalPlayer)
-        end
+local function HopServer()
+    local success, result = pcall(function()
+        local url = "https://games.roblox.com/v1/games/" .. PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"
+        local response = game:HttpGet(url)
+        return HttpService:JSONDecode(response)
     end)
 
-    if not success then
-        task.wait(1.5)
-        TeleportService:Teleport(game.PlaceId, LocalPlayer)
+    if success and result and result.data then
+        local servers = {}
+        for _, server in ipairs(result.data) do
+            if type(server) == "table" and server.id ~= CurrentJobId then
+                local maxPlayers = server.maxPlayers or 0
+                local playing = server.playing or 0
+                if playing < maxPlayers then
+                    table.insert(servers, server.id)
+                end
+            end
+        end
+
+        if #servers > 0 then
+            local targetServer = servers[math.random(1, #servers)]
+            
+            pcall(function()
+                TeleportService:TeleportToPlaceInstance(PlaceId, targetServer, LocalPlayer)
+            end)
+        else
+            warn("Không tìm thấy server phù hợp, đang thử lại...")
+            task.wait(2)
+            HopServer()
+        end
+    else
+        warn("Lỗi kết nối tới API Roblox, đang thử lại...")
+        task.wait(2)
+        HopServer()
     end
 end
 
-return SafeServerHop
+HopServer()
