@@ -1,5 +1,5 @@
 local successLoad, ServerHopLib = pcall(function()
-    return loadstring(game:HttpGet("https://raw.githubusercontent.com/nthanhluong0702/Scripts/refs/heads/main/SeverHop.lua"))()
+    return loadstring(game:HttpGet("https://raw.githubusercontent.com/nthanhluong0702/Scripts/refs/heads/main/ServerHop.lua"))()
 end)
 
 if not successLoad or not ServerHopLib then
