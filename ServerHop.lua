@@ -14,6 +14,13 @@ UltimateHop.Settings = {
     DelayBetweenTries = 1.5
 }
 
+TeleportService.TeleportInitFailed:Connect(function(player, teleportResult, errorMessage)
+    if player == LocalPlayer and teleportResult ~= Enum.TeleportResult.Success then
+        task.wait(1)
+        UltimateHop:Hop()
+    end
+end)
+
 local function GetHistory()
     if not (readfile and writefile) then return {} end
     local success, result = pcall(function()
@@ -98,12 +105,10 @@ function UltimateHop:Hop()
         end)
 
         if not success then
-            warn("[UltimateHop] Lỗi dịch chuyển, thử lại sau: " .. tostring(err))
             task.wait(self.Settings.DelayBetweenTries)
             self:Hop()
         end
     else
-        warn("[UltimateHop] Không tìm thấy server khớp, đang làm mới lịch sử...")
         if writefile then
             pcall(function() writefile(self.Settings.FileName, HttpService:JSONEncode({})) end)
         end
