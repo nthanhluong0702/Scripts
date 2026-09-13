@@ -1,3 +1,17 @@
+local successLoad, ServerHopLib = pcall(function()
+    return loadstring(game:HttpGet("https://raw.githubusercontent.com/nthanhluong0702/Scripts/refs/heads/main/SeverHop.lua"))()
+end)
+
+if not successLoad or not ServerHopLib then
+    ServerHopLib = {
+        Hop = function()
+            pcall(function()
+                game:GetService("TeleportService"):Teleport(game.PlaceId, game:GetService("Players").LocalPlayer)
+            end)
+        end
+    }
+end
+
 local ExternalConfig = getgenv().KaitunFruit or {}
 
 local LoadedConfig = {}
@@ -37,6 +51,7 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 local LocalPlayer = Players.LocalPlayer
+local PlaceID = game.PlaceId
 local Remotes = ReplicatedStorage:WaitForChild("Remotes", 3)
 local isTeleporting = false
 local isTweening = false
@@ -465,8 +480,6 @@ local function showFruitNotification(fruitName)
     })
 end
 
-local SERVER_HOP_URL = "https://raw.githubusercontent.com/nthanhluong0702/Scripts/refs/heads/main/ServerHop.lua"
-
 local function triggerServerHop(fruitName)
     if isTeleporting then return end
     isTeleporting = true
@@ -494,14 +507,11 @@ local function triggerServerHop(fruitName)
 
     task.spawn(function()
         pcall(function()
-            local ServerHopLib = loadstring(game:HttpGet(SERVER_HOP_URL))()
-            if ServerHopLib and type(ServerHopLib.Hop) == "function" then
-                ServerHopLib:Hop()
-            end
+            ServerHopLib.Hop()
         end)
     end)
     
-    task.wait(Config.Settings.HopDelay or 3)
+    task.wait(Config.Settings.HopDelay)
     isTeleporting = false
 end
 
@@ -555,6 +565,8 @@ local function collectServerFruit(fruitObj, fruitName)
     
     local handle = fruitObj.Handle
     local targetCF = handle.CFrame + Vector3.new(0, 3, 0)
+    
+    -- Sử dụng hàm tween tối ưu của bạn
     local successTween = optimizedTweenTo(targetCF)
     if not successTween then return false end
     
