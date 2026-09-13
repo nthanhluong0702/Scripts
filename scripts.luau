@@ -35,6 +35,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TeleportService = game:GetService("TeleportService")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
+local PlaceId = game.PlaceId
 
 local LocalPlayer = Players.LocalPlayer
 local isTeleporting = false
@@ -63,38 +64,48 @@ if not successLoad or not ServerHopLib then
 end
 
 local function triggerServerHop()
-    if isTeleporting then return end
-    isTeleporting = true
-    
-    if ScriptStatusBox then ScriptStatusBox:SetDesc("Đang đổi server...") end
-    
-    pcall(function()
-        local queueTeleport = syn and syn.queue_on_teleport or queue_on_teleport or (fluxus and fluxus.queue_on_teleport)
-        if queueTeleport and Config.Settings.BypassTeleport then
-            queueTeleport([[
-                repeat task.wait() until game:IsLoaded()
-                print("Đã sang server mới thành công!")
-            ]])
-        end
+    local success, response = pcall(function()
+        return game:HttpGet(string.format("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=50", game.PlaceId))
     end)
-    
-    local success, err = pcall(function()
-        TeleportService:Teleport(PlaceID, LocalPlayer)
-    end)
-    
-    if not success then
-        warn("[Hop Error]: Không thể đổi server, đang thử lại lần 2...", err)
-        task.wait(1)
-        pcall(function()
-            TeleportService:Teleport(PlaceID, LocalPlayer)
-        end)
+
+    if not success or not response then
+        game:GetService("TeleportService"):Teleport(game.PlaceId, game:GetService("Players").LocalPlayer)
+        return
     end
-    
-    task.spawn(function()
-        task.wait(8)
-        isTeleporting = false
+
+    local decoded, data = pcall(function()
+        return game:GetService("HttpService"):JSONDecode(response)
     end)
+
+    if not decoded or not data or not data.data then
+        game:GetService("TeleportService"):Teleport(game.PlaceId, game:GetService("Players").LocalPlayer)
+        return
+    end
+
+    local targetServerId = nil
+
+    for _, server in ipairs(data.data) do
+        if server.playing and server.playing >= 1 and server.playing <= 2 then
+            if server.id ~= game.JobId then
+                targetServerId = server.id
+                break
+            end
+        end
+    end
+
+    if targetServerId then
+        local teleSuccess = pcall(function()
+            game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, targetServerId, game:GetService("Players").LocalPlayer)
+        end)
+        
+        if not teleSuccess then
+            game:GetService("TeleportService"):Teleport(game.PlaceId, game:GetService("Players").LocalPlayer)
+        end
+    else
+        game:GetService("TeleportService"):Teleport(game.PlaceId, game:GetService("Players").LocalPlayer)
+    end
 end
+
 local successUI, Library = pcall(function()
     return loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 end)
