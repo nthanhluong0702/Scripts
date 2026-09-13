@@ -539,7 +539,7 @@ local function collectServerFruit(fruitObj, fruitName)
     return true
 end
 
-local HopModule = loadstring(game:HttpGet("https://github.com/nthanhluong0702/Scripts/raw/refs/heads/main/ServerHop.lua"))()
+local HopServer = loadstring(game:HttpGet("https://github.com/nthanhluong0702/Scripts/raw/refs/heads/main/ServerHop.lua"))()
 
 local function scanAndProcessFruits()
     if isTeleporting or isTweening then return false end
@@ -623,8 +623,8 @@ local function scanAndProcessFruits()
     
     if not found then
         FruitStatusBox:SetDesc("No Fruit Found") 
-        if HopModule then
-            HopModule:Hop()
+        if HopServer then
+            HopServer()
         end
     end
     return found
