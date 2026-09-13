@@ -1,3 +1,17 @@
+local successLoad, ServerHopLib = pcall(function()
+    return loadstring(game:HttpGet("https://raw.githubusercontent.com/nthanhluong0702/Scripts/refs/heads/main/ServerHop.lua"))()
+end)
+
+if not successLoad or not ServerHopLib then
+    ServerHopLib = {
+        Hop = function()
+            pcall(function()
+                game:GetService("TeleportService"):Teleport(game.PlaceId, game:GetService("Players").LocalPlayer)
+            end)
+        end
+    }
+end
+
 local ExternalConfig = getgenv().KaitunFruit or {}
 
 local LoadedConfig = {}
@@ -466,6 +480,41 @@ local function showFruitNotification(fruitName)
     })
 end
 
+local function triggerServerHop(fruitName)
+    if isTeleporting then return end
+    isTeleporting = true
+    
+    if fruitName then
+        showFruitNotification(fruitName)
+        ScriptStatusBox:SetDesc("Found fruit: " .. fruitName .. " | Hopping...")
+    else
+        ScriptStatusBox:SetDesc("Hopping to a new server...")
+    end
+
+    pcall(function()
+        if noclipConnection then noclipConnection:Disconnect() end
+    end)
+
+    pcall(function()
+        if queue_on_teleport then
+            queue_on_teleport([[
+                task.spawn(function()
+                    repeat task.wait() until game:IsLoaded()
+                end)
+            ]])
+        end
+    end)
+
+    task.spawn(function()
+        pcall(function()
+            ServerHopLib.Hop()
+        end)
+    end)
+    
+    task.wait(Config.Settings.HopDelay)
+    isTeleporting = false
+end
+
 local function collectDroppedFruitInstant(fruitObj)
     if not fruitObj or not fruitObj.Parent or not fruitObj:FindFirstChild("Handle") then return end
     
@@ -539,8 +588,6 @@ local function collectServerFruit(fruitObj, fruitName)
     return true
 end
 
-local HopServer = loadstring(game:HttpGet("https://github.com/nthanhluong0702/Scripts/raw/refs/heads/main/ServerHop.lua"))()
-
 local function scanAndProcessFruits()
     if isTeleporting or isTweening then return false end
     local found = false
@@ -568,6 +615,7 @@ local function scanAndProcessFruits()
                     
                     local storeResult = advancedStoreFruit(obj)
                     if storeResult == "Full" or storeResult == false then
+                        triggerServerHop(fruitName)
                         return true
                     elseif storeResult == true then
                         ScriptStatusBox:SetDesc("Fruit Stored Successfully!")
@@ -588,11 +636,12 @@ local function scanAndProcessFruits()
                         if isDropFolder then
                             collectDroppedFruitInstant(fruit)
                         else
-                        	collectServerFruit(fruit, fruit.Name)
+                            collectServerFruit(fruit, fruit.Name)
                         end
                         
                         local storeResult = advancedStoreFruit(fruit)
                         if storeResult == "Full" or storeResult == false then
+                            triggerServerHop(fruit.Name)
                             return true
                         elseif storeResult == true then
                             ScriptStatusBox:SetDesc("Fruit Stored Successfully!")
@@ -611,6 +660,7 @@ local function scanAndProcessFruits()
                     FruitStatusBox:SetDesc("Found in backpack: " .. item.Name)
                     local storeResult = advancedStoreFruit(item)
                     if storeResult == "Full" or storeResult == false then
+                        triggerServerHop(item.Name)
                         return true
                     elseif storeResult == true then
                         ScriptStatusBox:SetDesc("Fruit Stored Successfully!")
@@ -622,13 +672,11 @@ local function scanAndProcessFruits()
     end)
     
     if not found then
-        FruitStatusBox:SetDesc("No Fruit Found") 
-        if HopServer then
-            HopServer()
-        end
+        FruitStatusBox:SetDesc("No Fruit Found.") 
     end
     return found
 end
+
 Window:SelectTab(1)
 
 Library:Notify({
