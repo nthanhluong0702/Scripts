@@ -64,11 +64,6 @@ if not successLoad or not ServerHopLib then
 end
 
 local function triggerServerHop()
-    local TeleportService = game:GetService("TeleportService")
-    local Players = game:GetService("Players")
-    local LocalPlayer = Players.LocalPlayer
-    local PlaceId = game.PlaceId
-
     local connection
     connection = TeleportService.TeleportInitFailed:Connect(function(player, teleportResult, errorMessage)
         if player == LocalPlayer then
