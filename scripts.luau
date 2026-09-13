@@ -602,9 +602,9 @@ local function scanAndProcessFruits()
         local targetObj = targetData.obj
         
         if targetData.priority == 0 then
-            if FruitStatusBox then FruitStatusBox:SetDesc("Found in backpack: " .. targetData.name) end
+            if FruitStatusBox then FruitStatusBox:SetDesc(targetData.name) end
         else
-            if FruitStatusBox then FruitStatusBox:SetDesc("Found: " .. targetData.name) end
+            if FruitStatusBox then FruitStatusBox:SetDesc(targetData.name) end
             
             if targetData.isDrop then
                 collectDroppedFruitInstant(targetObj)
