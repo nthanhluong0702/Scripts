@@ -675,7 +675,7 @@ task.spawn(function()
                     isTeleporting = true
                     task.wait(1)
                     
-                    showFruitNotification(targetData.name)
+                    showFruitNotification("Joining Server Have Fruit")
                     HopModule.Hop()
                 end
             else
