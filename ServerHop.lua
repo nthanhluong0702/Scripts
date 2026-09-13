@@ -14,13 +14,6 @@ UltimateHop.Settings = {
     DelayBetweenTries = 1.5
 }
 
-TeleportService.TeleportInitFailed:Connect(function(player, teleportResult, errorMessage)
-    if player == LocalPlayer and teleportResult ~= Enum.TeleportResult.Success then
-        task.wait(1)
-        UltimateHop:Hop()
-    end
-end)
-
 local function GetHistory()
     if not (readfile and writefile) then return {} end
     local success, result = pcall(function()
@@ -99,7 +92,7 @@ function UltimateHop:Hop()
             history[targetServerId] = true
             SaveHistory(history)
         end
-
+        
         local success, err = pcall(function()
             TeleportService:TeleportToPlaceInstance(game.PlaceId, targetServerId, LocalPlayer)
         end)
