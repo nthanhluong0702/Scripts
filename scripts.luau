@@ -66,19 +66,23 @@ local function triggerServerHop()
     if isTeleporting then return end
     isTeleporting = true
     
-    if ScriptStatusBox then ScriptStatusBox:SetDesc("Đang đổi server...") end
+    if ScriptStatusBox then ScriptStatusBox:SetDesc("Đang tạo server mới...") end
     
-    if syn and syn.hop_server then
-        syn.hop_server()
-        return
-    end
+    pcall(function()
+        local success, err = pcall(function()
+            local serverCode = TeleportService:ReserveServer(PlaceID)
+            TeleportService:TeleportToPrivateServer(PlaceID, serverCode, {LocalPlayer})
+        end)
+        
+        if not success then
+            warn("[Hop Error]: Không thể tạo server riêng:", err)
+            TeleportService:Teleport(PlaceID, LocalPlayer)
+        end
+    end)
     
     task.spawn(function()
-        while task.wait(1) do
-            pcall(function()
-                TeleportService:Teleport(PlaceID, LocalPlayer)
-            end)
-        end
+        task.wait(6)
+        isTeleporting = false
     end)
 end
 
