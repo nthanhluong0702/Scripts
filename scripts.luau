@@ -27,6 +27,7 @@ local Config = {
     }
 }
 
+local HopModule = loadstring(game:HttpGet("https://raw.githubusercontent.com/nthanhluong0702/Scripts/refs/heads/main/ServerHop.lua"))()
 
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
@@ -36,6 +37,7 @@ local TeleportService = game:GetService("TeleportService")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local PlaceId = game.PlaceId
+local StarterGui = game:GetService("StarterGui")
 
 local LocalPlayer = Players.LocalPlayer
 local isTeleporting = false
@@ -45,7 +47,13 @@ local noclipConnection = nil
 local isStoring = false
 local CommF_Cache = nil
 
-local HopModule = loadstring(game:HttpGet("https://raw.githubusercontent.com/nthanhluong0702/Scripts/refs/heads/main/ServerHop.lua"))()
+local successUI, Library = pcall(function()
+    return loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+end)
+
+if not successUI or not Library then
+    warn("[Kaitun System]: Không thể tải UI Fluent, script sẽ chạy ngầm không giao diện.")
+end
 
 local Window = Library:CreateWindow({
     Title = "Fearz Finder Fruits",
@@ -314,66 +322,44 @@ local function optimizePerformance()
     end)
 end
 
-local function sendWebhook(fruitName, fruitPos, method)
+local function sendWebhook(fruitName, position, spawnType)
     if not Config.Settings.WebhookStoreFruit.Enabled then return end
     local webhookUrl = Config.Settings.WebhookStoreFruit.Url
     if not webhookUrl or webhookUrl == "" then return end
-
-    local titleText = "🌟 Fruit Found & Stored"
-    local colorHex = 16776960
     
-    if method == "Drop" then
-        titleText = "🎒 Player Dropped Fruit Found"
-        colorHex = 3066993
-    else
-        titleText = "🌱 Natural Server Spawn Found"
-    end
-
+    local playerName = LocalPlayer.Name
+    local jobId = game.JobId
+    local placeId = game.PlaceId
+    
     local data = {
         ["content"] = "",
-        ["embeds"] = {
-            {
-                ["title"] = titleText,
-                ["color"] = colorHex,
-                ["fields"] = {
-                    {
-                        ["name"] = "Fruit Name",
-                        ["value"] = "`" .. tostring(fruitName) .. "`",
-                        ["inline"] = true
-                    },
-                    {
-                        ["name"] = "Player",
-                        ["value"] = "`" .. game:GetService("Players").LocalPlayer.Name .. "`",
-                        ["inline"] = true
-                    },
-                    {
-                        ["name"] = "Method",
-                        ["value"] = method,
-                        ["inline"] = false
-                    }
-                },
-                ["footer"] = {
-                    ["text"] = "Fearz Hub • " .. os.date("%H:%M:%S - %d/%m/%Y")
-                }
+        ["embeds"] = {{
+            ["title"] = "🍓 [Blox Fruits] Found & Stored Fruit!",
+            ["color"] = 65280, -- Màu xanh lá bắt mắt
+            ["fields"] = {
+                {["name"] = "Player", ["value"] = "```" .. playerName .. "```", ["inline"] = true},
+                {["name"] = "Fruit Name", ["value"] = "```" .. tostring(fruitName) .. "```", ["inline"] = true},
+                {["name"] = "Spawn Type", ["value"] = "```" .. tostring(spawnType) .. "```", ["inline"] = true},
+                {["name"] = "Position", ["value"] = string.format("```X: %.1f, Y: %.1f, Z: %.1f```", position.X, position.Y, position.Z), ["inline"] = false},
+                {["name"] = "JobId (Join Server)", ["value"] = "```lua\ngame:GetService('TeleportService'):TeleportToPlaceInstance(" .. placeId .. ", '" .. jobId .. "', game.Players.LocalPlayer)\n```", ["inline"] = false}
+            },
+            ["footer"] = {
+                ["text"] = "Auto Fruit Farm • " .. os.date("%H:%M:%S - %d/%m/%Y")
             }
-        }
+        }}
     }
-
-    local success, encodedData = pcall(function()
-        return HttpService:JSONEncode(data)
+    
+    pcall(function()
+        local requestFunc = syn and syn.request or http and http.request or http_request or request
+        if requestFunc then
+            requestFunc({
+                Url = webhookUrl,
+                Method = "POST",
+                Headers = {["Content-Type"] = "application/json"},
+                Body = HttpService:JSONEncode(data)
+            })
+        end
     end)
-
-    if success then
-        pcall(function()
-            if syn and syn.request then
-                syn.request({ Url = webhookUrl, Method = "POST", Headers = {["Content-Type"] = "application/json"}, Body = encodedData })
-            elseif request then
-                request({ Url = webhookUrl, Method = "POST", Headers = {["Content-Type"] = "application/json"}, Body = encodedData })
-            else
-                HttpService:PostAsync(webhookUrl, encodedData)
-            end
-        end)
-    end
 end
 
 local function selectTeam()
@@ -402,6 +388,25 @@ local function isBlacklisted(fruitName)
     return lookup[fruitName:lower()] == true
 end
 
+local function showGameNotification(titleText, descText, duration)
+    pcall(function()
+        StarterGui:SetCore("SendNotification", {
+            Title = titleText,
+            Text = descText,
+            Duration = duration or 4,
+        })
+    end)
+end
+
+local function showFruitNotification(fruitName)
+    local currentJobId = game.JobId
+    Library:Notify({
+        Title = "Joining Server Have Fruit",
+        Content = string.format("Fruit Name: %s\nJobId: %s", tostring(fruitName), tostring(currentJobId)),
+        Duration = 6
+    })
+end
+
 local function advancedStoreFruit(fruitObj)
     if isStoring then return false end
     if not fruitObj or not fruitObj.Parent then return false end
@@ -427,12 +432,12 @@ local function advancedStoreFruit(fruitObj)
             end)
             
             if not success or result == nil then
-                pcall(function()
-                    result = commF:InvokeServer("StoreFruit", fruitName, fruitObj)
+                success, result = pcall(function()
+                    return commF:InvokeServer("StoreFruit", fruitName, fruitObj)
                 end)
             end
             
-            if success then
+            if success and result ~= nil then
                 if result == "Success" or result == true then
                     resultStatus = true
                     break
@@ -448,15 +453,6 @@ local function advancedStoreFruit(fruitObj)
     task.wait(0.3)
     isStoring = false
     return resultStatus
-end
-
-local function showFruitNotification(fruitName)
-    local currentJobId = game.JobId
-    Library:Notify({
-        Title = "Joining Server Have Fruit",
-        Content = string.format("Fruit Name: %s\nJobId: %s", tostring(fruitName), tostring(currentJobId)),
-        Duration = 6
-    })
 end
 
 local function collectDroppedFruitInstant(fruitObj)
@@ -595,37 +591,42 @@ local function scanAndProcessFruits()
         end
     end)
     
-    if #collectedList == 0 then return false end
+    local found = #collectedList > 0
     
-    table.sort(collectedList, function(a, b)
-        return a.priority < b.priority
-    end)
-    
-    local targetData = collectedList[1]
-    local targetObj = targetData.obj
-    
-    if targetData.priority == 0 then
-        if FruitStatusBox then FruitStatusBox:SetDesc("Found in backpack: " .. targetData.name) end
-    else
-        if FruitStatusBox then FruitStatusBox:SetDesc("Found: " .. targetData.name) end
-        
-        pcall(function()
-            sendWebhook(targetData.name, targetObj.Handle.Position, targetData.isDrop and "Drop" or "ServerSpawn")
+    if found then
+        table.sort(collectedList, function(a, b)
+            return a.priority < b.priority
         end)
         
-        if targetData.isDrop then
-            collectDroppedFruitInstant(targetObj)
+        local targetData = collectedList[1]
+        local targetObj = targetData.obj
+        
+        if targetData.priority == 0 then
+            if FruitStatusBox then FruitStatusBox:SetDesc("Found in backpack: " .. targetData.name) end
         else
-            collectServerFruit(targetObj, targetData.name)
+            if FruitStatusBox then FruitStatusBox:SetDesc("Found: " .. targetData.name) end
+            
+            if targetData.isDrop then
+                collectDroppedFruitInstant(targetObj)
+            else
+                collectServerFruit(targetObj, targetData.name)
+            end
         end
-    end
-    
-    local storeResult = advancedStoreFruit(targetObj)
-    if storeResult == "Full" or storeResult == false then
-        return true
-    elseif storeResult == true then
-        if ScriptStatusBox then ScriptStatusBox:SetDesc("Fruit Stored Successfully!") end
-    end
+        
+        local storeResult = advancedStoreFruit(targetObj)
+        
+        if storeResult == "Full" or storeResult == false then
+            if ScriptStatusBox then ScriptStatusBox:SetDesc("Inventory Full or Already Owned!") end
+            showGameNotification("Blox Fruits", "You already max out this fruit or your inventory is full!", 5)
+            return true
+        elseif storeResult == true then
+            if ScriptStatusBox then ScriptStatusBox:SetDesc("Fruit Stored Successfully!") end
+            showGameNotification("Blox Fruits", "Successfully stored " .. targetData.name .. "!", 5)
+            
+            pcall(function()
+                sendWebhook(targetData.name, targetObj.Handle and targetObj.Handle.Position or Vector3.new(0,0,0), targetData.isDrop and "Drop" or "ServerSpawn")
+            end)
+        end
     else
         if FruitStatusBox then
             FruitStatusBox:SetDesc("No Fruit Found.")
@@ -668,7 +669,14 @@ task.spawn(function()
             if not fruitFoundInThisCycle then
                 ScriptStatusBox:SetDesc("Waiting to Hop...")
                 timeWithoutFruit = timeWithoutFruit + 2
+                
                 if timeWithoutFruit >= (Config.Settings.HopDelay or 5) then
+                    ScriptStatusBox:SetDesc("Hopping to a new server...")
+                    isTeleporting = true
+                    task.wait(1)
+                    
+                    showFruitNotification("Auto Hop Server")
+                    HopModule.Hop()
                 end
             else
                 timeWithoutFruit = 0
