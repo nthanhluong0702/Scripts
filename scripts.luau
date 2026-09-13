@@ -349,17 +349,21 @@ local function sendWebhook(fruitName, position, spawnType)
         }}
     }
     
-    pcall(function()
-        local requestFunc = syn and syn.request or http and http.request or http_request or request
-        if requestFunc then
-            requestFunc({
-                Url = webhookUrl,
-                Method = "POST",
-                Headers = {["Content-Type"] = "application/json"},
-                Body = HttpService:JSONEncode(data)
-            })
-        end
+    local success, encodedData = pcall(function()
+        return HttpService:JSONEncode(data)
     end)
+
+    if success then
+        pcall(function()
+            if syn and syn.request then
+                syn.request({ Url = webhookUrl, Method = "POST", Headers = {["Content-Type"] = "application/json"}, Body = encodedData })
+            elseif request then
+                request({ Url = webhookUrl, Method = "POST", Headers = {["Content-Type"] = "application/json"}, Body = encodedData })
+            else
+                HttpService:PostAsync(webhookUrl, encodedData)
+            end
+        end)
+    end
 end
 
 local function selectTeam()
