@@ -113,7 +113,7 @@ Tabs.Configuration:AddDropdown("Theme", {
     Callback = function(Value)
         Config.Settings.Theme = Value
         Library:SetTheme(Value)
-        saveConfigToFile()
+        saveConfig()
     end
 })
 
@@ -123,7 +123,7 @@ Tabs.Configuration:AddDropdown("TweenSpeed", {
     Default = Config.Settings.TweenSpeed,
     Callback = function(Value)
         Config.Settings.TweenSpeed = Value
-        saveConfigToFile()
+        saveConfig()
     end
 })
 
@@ -133,7 +133,7 @@ local FixLagToggle = Tabs.Configuration:AddToggle("FixLag", {
 })
 FixLagToggle:OnChanged(function(Value)
     Config.Settings.FixLagEnabled = Value
-    saveConfigToFile()
+    saveConfig()
 end)
 
 local BypassTeleportToggle = Tabs.Configuration:AddToggle("BypassTeleport", {
@@ -142,7 +142,7 @@ local BypassTeleportToggle = Tabs.Configuration:AddToggle("BypassTeleport", {
 })
 BypassTeleportToggle:OnChanged(function(Value)
     Config.Settings.BypassTeleport = Value
-    saveConfigToFile()
+    saveConfig()
 end)
 
 Tabs.Configuration:AddInput("HopDelay", {
@@ -155,7 +155,7 @@ Tabs.Configuration:AddInput("HopDelay", {
         local num = tonumber(Value)
         if num then 
             Config.Settings.HopDelay = num 
-            saveConfigToFile()
+            saveConfig()
         end
     end
 })
@@ -165,7 +165,7 @@ Tabs.Configuration:AddToggle("StartAutomation", {
     Default = Config.Settings.AutoHopWhenNoFruit,
     Callback = function(Value)
         Config.Settings.AutoHopWhenNoFruit = Value
-        saveConfigToFile()
+        saveConfig()
     end
 })
 
@@ -175,7 +175,7 @@ local AutoStoreToggle = Tabs.Configuration:AddToggle("StoreFruit", {
 })
 AutoStoreToggle:OnChanged(function(Value)
     Config.Settings.AutoStore = Value
-    saveConfigToFile()
+    saveConfig()
 end)
 
 local WebhookToggle = Tabs.Webhook:AddToggle("WebhookToggle", {
@@ -184,7 +184,7 @@ local WebhookToggle = Tabs.Webhook:AddToggle("WebhookToggle", {
 })
 WebhookToggle:OnChanged(function(Value)
     Config.Settings.WebhookStoreFruit.Enabled = Value
-    saveConfigToFile()
+    saveConfig()
 end)
 
 Tabs.Webhook:AddInput("WebhookUrlInput", {
@@ -195,7 +195,7 @@ Tabs.Webhook:AddInput("WebhookUrlInput", {
     Finished = true,
     Callback = function(Value)
         Config.Settings.WebhookStoreFruit.Url = Value
-        saveConfigToFile()
+        saveConfig()
     end
 })
 
@@ -334,7 +334,7 @@ local function sendWebhook(fruitName, position, spawnType)
     local data = {
         ["content"] = "",
         ["embeds"] = {{
-            ["title"] = "🍓 [Blox Fruits] Found & Stored Fruit!",
+            ["title"] = "🧸 [Blox Fruits] Found & Stored Fruit!",
             ["color"] = 65280, -- Màu xanh lá bắt mắt
             ["fields"] = {
                 {["name"] = "Player", ["value"] = "```" .. playerName .. "```", ["inline"] = true},
@@ -344,7 +344,7 @@ local function sendWebhook(fruitName, position, spawnType)
                 {["name"] = "JobId (Join Server)", ["value"] = "```lua\ngame:GetService('TeleportService'):TeleportToPlaceInstance(" .. placeId .. ", '" .. jobId .. "', game.Players.LocalPlayer)\n```", ["inline"] = false}
             },
             ["footer"] = {
-                ["text"] = "Auto Fruit Farm • " .. os.date("%H:%M:%S - %d/%m/%Y")
+                ["text"] = "Fear Hub • " .. os.date("%H:%M:%S - %d/%m/%Y")
             }
         }}
     }
