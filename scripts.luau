@@ -45,52 +45,7 @@ local noclipConnection = nil
 local isStoring = false
 local CommF_Cache = nil
 
-local successLoad, ServerHopLib = pcall(function()
-    return loadstring(game:HttpGet("https://raw.githubusercontent.com/nthanhluong0702/Scripts/refs/heads/main/ServerHop.lua"))()
-end)
-
-if not successLoad or not ServerHopLib then
-    warn("[Kaitun System]: Không thể tải ServerHopLib từ GitHub, đang dùng cơ chế dự phòng...")
-    ServerHopLib = {
-        Hop = function(self, maxPlayers)
-            pcall(function()
-                TeleportService:Teleport(PlaceID, LocalPlayer)
-            end)
-        end,
-        FindCleanServer = function(self, maxPlayers)
-            return nil
-        end
-    }
-end
-
-local function triggerServerHop()
-    local connection
-    connection = TeleportService.TeleportInitFailed:Connect(function(player, teleportResult, errorMessage)
-        if player == LocalPlayer then
-            warn("[Hop Error caught]: ", errorMessage)
-            task.wait(1)
-            pcall(function()
-                TeleportService:Teleport(PlaceId, LocalPlayer)
-            end)
-            if connection then
-                connection:Disconnect()
-            end
-        end
-    end)
-
-    local success, err = pcall(function()
-        TeleportService:Teleport(PlaceId, LocalPlayer)
-    end)
-
-    if not success then
-        warn("[Teleport Failed]:", err)
-        task.delay(3, function()
-            if connection then
-                connection:Disconnect()
-            end
-        end)
-    end
-end
+local HopModule = loadstring(game:HttpGet("https://raw.githubusercontent.com/nthanhluong0702/Scripts/refs/heads/main/ServerHop.lua"))()
 
 local Window = Library:CreateWindow({
     Title = "Fearz Finder Fruits",
@@ -520,17 +475,15 @@ local function collectDroppedFruitInstant(fruitObj)
     local originalCFrame = hrp.CFrame
     
     humanoid.PlatformStand = true
-    startNoclip()
-    hrp.Anchored = true
+    if startNoclip then startNoclip() end
+    hrp.Anchored = false
     
     local startTime = tick()
     repeat
         task.wait()
         pcall(function()
             if fruitObj.Parent and handle.Parent then
-                hrp.CFrame = handle.CFrame
-                hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-                hrp.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+                hrp.CFrame = handle.CFrame + Vector3.new(0, 0.5, 0)
                 
                 if firetouchinterest then
                     firetouchinterest(hrp, handle, 0)
@@ -538,13 +491,12 @@ local function collectDroppedFruitInstant(fruitObj)
                 end
             end
         end)
-    until not fruitObj.Parent or not handle.Parent or (tick() - startTime > 3)
+    until not fruitObj.Parent or not handle.Parent or (tick() - startTime > 2.5)
     
     hrp.CFrame = originalCFrame
-    
     hrp.Anchored = false
     humanoid.PlatformStand = false
-    stopNoclip()
+    if stopNoclip then stopNoclip() end
 end
 
 local function collectServerFruit(fruitObj, fruitName)
@@ -555,10 +507,26 @@ local function collectServerFruit(fruitObj, fruitName)
     local handle = fruitObj.Handle
     local targetCF = handle.CFrame + Vector3.new(0, 3, 0)
     
-    local successTween = optimizedTweenTo(targetCF)
-    if not successTween then return false end
+    local tweenDone = false
+    task.spawn(function()
+        pcall(function()
+            if optimizedTweenTo then
+                optimizedTweenTo(targetCF)
+            end
+        end)
+        tweenDone = true
+    end)
     
-    task.wait(0.2)
+    local waitStart = tick()
+    while not tweenDone and (tick() - waitStart < 8) do
+        task.wait(0.1)
+        if not fruitObj.Parent or not handle.Parent then 
+            tweenDone = true
+            break 
+        end
+    end
+    
+    task.wait(0.1)
     
     local startTime = tick()
     repeat
@@ -578,63 +546,42 @@ end
 
 local function scanAndProcessFruits()
     if isTeleporting or isTweening then return false end
-    local found = false
+    
+    local collectedList = {}
     
     pcall(function()
+        local fruitSpawnsFolder = Workspace:FindFirstChild("FruitSpawns")
+        local dropsFolder = Workspace:FindFirstChild("Drops")
+        
+        local function evaluateAndAdd(item, isDrop)
+            if item:IsA("Tool") and item:FindFirstChild("Handle") then
+                local name = item.Name
+                if not isBlacklisted(name) and string.find(name, "Fruit") then
+                    table.insert(collectedList, {
+                        obj = item,
+                        name = name,
+                        isDrop = isDrop,
+                        priority = isDrop and 1 or 2 
+                    })
+                end
+            end
+        end
+        
+        if fruitSpawnsFolder then
+            for _, fruit in ipairs(fruitSpawnsFolder:GetChildren()) do
+                evaluateAndAdd(fruit, false)
+            end
+        end
+        
+        if dropsFolder then
+            for _, fruit in ipairs(dropsFolder:GetChildren()) do
+                evaluateAndAdd(fruit, true)
+            end
+        end
+        
         for _, obj in ipairs(Workspace:GetChildren()) do
-            if isTeleporting or isTweening then break end
-            
             if obj:IsA("Tool") and obj:FindFirstChild("Handle") then
-                local fruitName = obj.Name
-                if not isBlacklisted(fruitName) and string.find(fruitName, "Fruit") then
-                    found = true
-                    FruitStatusBox:SetDesc("Found: " .. fruitName)
-                    
-                    local isPlayerDrop = (obj.Parent and obj.Parent.Name == "Drops") or (obj.Parent == Workspace)
-                    pcall(function()
-                        sendWebhook(fruitName, obj.Handle.Position, isPlayerDrop and "Drop" or "ServerSpawn")
-                    end)
-                    
-                    if isPlayerDrop then
-                        collectDroppedFruitInstant(obj)
-                    else
-                        collectServerFruit(obj, fruitName)
-                    end
-                    
-                    local storeResult = advancedStoreFruit(obj)
-                    if storeResult == "Full" or storeResult == false then
-                        return true
-                    elseif storeResult == true then
-                        ScriptStatusBox:SetDesc("Fruit Stored Successfully!")
-                    end
-                    return true
-                end
-            elseif obj.Name == "FruitSpawns" or obj.Name == "Drops" then
-                for _, fruit in ipairs(obj:GetChildren()) do
-                    if fruit:FindFirstChild("Handle") and not isBlacklisted(fruit.Name) then
-                        found = true
-                        FruitStatusBox:SetDesc("Found: " .. fruit.Name)
-                        
-                        local isDropFolder = (obj.Name == "Drops")
-                        pcall(function()
-                            sendWebhook(fruit.Name, fruit.Handle.Position, isDropFolder and "Drop" or "ServerSpawn")
-                        end)
-                        
-                        if isDropFolder then
-                            collectDroppedFruitInstant(fruit)
-                        else
-                            collectServerFruit(fruit, fruit.Name)
-                        end
-                        
-                        local storeResult = advancedStoreFruit(fruit)
-                        if storeResult == "Full" or storeResult == false then
-                            return true
-                        elseif storeResult == true then
-                            ScriptStatusBox:SetDesc("Fruit Stored Successfully!")
-                        end
-                        return true
-                    end
-                end
+                evaluateAndAdd(obj, obj.Parent == Workspace)
             end
         end
         
@@ -642,23 +589,49 @@ local function scanAndProcessFruits()
         if backpack then
             for _, item in ipairs(backpack:GetChildren()) do
                 if item:IsA("Tool") and string.find(item.Name, "Fruit") and not isBlacklisted(item.Name) then
-                    found = true
-                    FruitStatusBox:SetDesc("Found in backpack: " .. item.Name)
-                    local storeResult = advancedStoreFruit(item)
-                    if storeResult == "Full" or storeResult == false then
-                        return true
-                    elseif storeResult == true then
-                        ScriptStatusBox:SetDesc("Fruit Stored Successfully!")
-                    end
-                    return true
+                    table.insert(collectedList, {obj = item, name = item.Name, isDrop = false, priority = 0})
                 end
             end
         end
     end)
     
-    if not found then
-        FruitStatusBox:SetDesc("No Fruit Found.") 
+    if #collectedList == 0 then return false end
+    
+    table.sort(collectedList, function(a, b)
+        return a.priority < b.priority
+    end)
+    
+    local targetData = collectedList[1]
+    local targetObj = targetData.obj
+    
+    if targetData.priority == 0 then
+        if FruitStatusBox then FruitStatusBox:SetDesc("Found in backpack: " .. targetData.name) end
+    else
+        if FruitStatusBox then FruitStatusBox:SetDesc("Found: " .. targetData.name) end
+        
+        pcall(function()
+            sendWebhook(targetData.name, targetObj.Handle.Position, targetData.isDrop and "Drop" or "ServerSpawn")
+        end)
+        
+        if targetData.isDrop then
+            collectDroppedFruitInstant(targetObj)
+        else
+            collectServerFruit(targetObj, targetData.name)
+        end
     end
+    
+    local storeResult = advancedStoreFruit(targetObj)
+    if storeResult == "Full" or storeResult == false then
+        return true
+    elseif storeResult == true then
+        if ScriptStatusBox then ScriptStatusBox:SetDesc("Fruit Stored Successfully!") end
+    end
+    else
+        if FruitStatusBox then
+            FruitStatusBox:SetDesc("No Fruit Found.")
+        end
+    end
+    
     return found
 end
 
@@ -696,7 +669,6 @@ task.spawn(function()
                 ScriptStatusBox:SetDesc("Waiting to Hop...")
                 timeWithoutFruit = timeWithoutFruit + 2
                 if timeWithoutFruit >= (Config.Settings.HopDelay or 5) then
-                    triggerServerHop()
                 end
             else
                 timeWithoutFruit = 0
