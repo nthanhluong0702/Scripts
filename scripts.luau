@@ -66,26 +66,35 @@ local function triggerServerHop()
     if isTeleporting then return end
     isTeleporting = true
     
-    if ScriptStatusBox then ScriptStatusBox:SetDesc("Đang tạo server mới...") end
+    if ScriptStatusBox then ScriptStatusBox:SetDesc("Đang đổi server...") end
     
     pcall(function()
-        local success, err = pcall(function()
-            local serverCode = TeleportService:ReserveServer(PlaceID)
-            TeleportService:TeleportToPrivateServer(PlaceID, serverCode, {LocalPlayer})
-        end)
-        
-        if not success then
-            warn("[Hop Error]: Không thể tạo server riêng:", err)
-            TeleportService:Teleport(PlaceID, LocalPlayer)
+        local queueTeleport = syn and syn.queue_on_teleport or queue_on_teleport or (fluxus and fluxus.queue_on_teleport)
+        if queueTeleport and Config.Settings.BypassTeleport then
+            queueTeleport([[
+                repeat task.wait() until game:IsLoaded()
+                print("Đã sang server mới thành công!")
+            ]])
         end
     end)
     
+    local success, err = pcall(function()
+        TeleportService:Teleport(PlaceID, LocalPlayer)
+    end)
+    
+    if not success then
+        warn("[Hop Error]: Không thể đổi server, đang thử lại lần 2...", err)
+        task.wait(1)
+        pcall(function()
+            TeleportService:Teleport(PlaceID, LocalPlayer)
+        end)
+    end
+    
     task.spawn(function()
-        task.wait(6)
+        task.wait(8)
         isTeleporting = false
     end)
 end
-
 local successUI, Library = pcall(function()
     return loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 end)
