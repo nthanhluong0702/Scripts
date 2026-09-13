@@ -335,7 +335,7 @@ local function sendWebhook(fruitName, position, spawnType)
         ["content"] = "",
         ["embeds"] = {{
             ["title"] = "🧸 [Blox Fruits] Found & Stored Fruit!",
-            ["color"] = 65280, -- Màu xanh lá bắt mắt
+            ["color"] = 65280,
             ["fields"] = {
                 {["name"] = "Player", ["value"] = "```" .. playerName .. "```", ["inline"] = true},
                 {["name"] = "Fruit Name", ["value"] = "```" .. tostring(fruitName) .. "```", ["inline"] = true},
@@ -675,7 +675,7 @@ task.spawn(function()
                     isTeleporting = true
                     task.wait(1)
                     
-                    showFruitNotification("Auto Hop Server")
+                    showFruitNotification(targetData.name)
                     HopModule.Hop()
                 end
             else
@@ -686,5 +686,15 @@ task.spawn(function()
             ScriptStatusBox:SetDesc("Paused (Start is Off)")
             timeWithoutFruit = 0
         end
+    end
+end)
+
+TeleportService.TeleportInitFailed:Connect(function(player, teleportResult, errorMessage)
+    if player == LocalPlayer then
+        warn("Teleport failed: " .. tostring(errorMessage) .. " -> Retrying hop...")
+        task.wait(2)
+        pcall(function()
+            HopModule.Hop()
+        end)
     end
 end)
