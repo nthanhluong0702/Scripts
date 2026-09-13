@@ -66,62 +66,32 @@ local function triggerServerHop()
     if isTeleporting then return end
     isTeleporting = true
     
-    if ScriptStatusBox then ScriptStatusBox:SetDesc("Đang tìm server sạch...") end
+    if ScriptStatusBox then ScriptStatusBox:SetDesc("Đang tiến hành đổi server...") end
     
     pcall(function()
         local queueTeleport = syn and syn.queue_on_teleport or queue_on_teleport or (fluxus and fluxus.queue_on_teleport)
         if queueTeleport and Config.Settings.BypassTeleport then
             queueTeleport([[
                 repeat task.wait() until game:IsLoaded()
-                print("Đã sang server mới thành công!")
+                print("Đã chuyển server thành công!")
             ]])
         end
     end)
     
-    local teleportSuccess = false
-
-    local targetServer = nil
-    pcall(function()
-        if ServerHopLib.FindCleanServer then
-            targetServer = ServerHopLib:FindCleanServer(2, 0)
-        end
+    local success, err = pcall(function()
+        TeleportService:Teleport(PlaceID, LocalPlayer)
     end)
     
-    if targetServer then
-        print("[Hop]: Đang thử teleport vào instance:", targetServer)
-        if ScriptStatusBox then ScriptStatusBox:SetDesc("Đang bay vào server sạch...") end
-        
-        local success, err = pcall(function()
-            TeleportService:TeleportToPlaceInstance(PlaceID, targetServer, LocalPlayer)
-        end)
-        
-        if success then
-            teleportSuccess = true
-        else
-            warn("[Hop Warning]: Lỗi TeleportToPlaceInstance (có thể server đầy/lỗi):", err)
-        end
-    end
-    
-    if not teleportSuccess then
-        print("[Hop]: Chuyển sang phương án Teleport ngẫu nhiên...")
-        if ScriptStatusBox then ScriptStatusBox:SetDesc("Đang đổi server ngẫu nhiên...") end
-        
-        local success, err = pcall(function()
-            TeleportService:Teleport(PlaceID, LocalPlayer)
-        end)
-        
-        if success then
-            teleportSuccess = true
-        else
-            warn("[Hop Error]: Lỗi Teleport ngẫu nhiên:", err)
-        end
+    if not success then
+        warn("[Hop Error]: Không thể teleport:", err)
     end
     
     task.spawn(function()
-        task.wait(5)
+        task.wait(6)
         isTeleporting = false
     end)
 end
+
 local successUI, Library = pcall(function()
     return loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 end)
