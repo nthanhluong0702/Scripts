@@ -1,46 +1,31 @@
+local HopModule = {}
 local TeleportService = game:GetService("TeleportService")
-local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
-
 local LocalPlayer = Players.LocalPlayer
-local PlaceId = game.PlaceId
-local CurrentJobId = game.JobId
 
-local function HopServer()
-    local success, result = pcall(function()
-        local url = "https://games.roblox.com/v1/games/" .. PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"
-        local response = game:HttpGet(url)
-        return HttpService:JSONDecode(response)
+local BLOX_FRUITS_ID = 2753915549
+
+function HopModule.Hop()
+    pcall(function()
+        if queue_on_teleport then
+            queue_on_teleport([[
+                task.spawn(function()
+                    repeat task.wait() until game:IsLoaded()
+                end)
+            ]])
+        end
     end)
 
-    if success and result and result.data then
-        local servers = {}
-        for _, server in ipairs(result.data) do
-            if type(server) == "table" and server.id ~= CurrentJobId then
-                local maxPlayers = server.maxPlayers or 0
-                local playing = server.playing or 0
-                if playing < maxPlayers then
-                    table.insert(servers, server.id)
-                end
-            end
-        end
+    local success = pcall(function()
+        TeleportService:Teleport(BLOX_FRUITS_ID, LocalPlayer)
+    end)
 
-        if #servers > 0 then
-            local targetServer = servers[math.random(1, #servers)]
-            
-            pcall(function()
-                TeleportService:TeleportToPlaceInstance(PlaceId, targetServer, LocalPlayer)
-            end)
-        else
-            warn("Không tìm thấy server phù hợp, đang thử lại...")
-            task.wait(2)
-            HopServer()
-        end
-    else
-        warn("Lỗi kết nối tới API Roblox, đang thử lại...")
+    if not success then
         task.wait(2)
-        HopServer()
+        pcall(function()
+            TeleportService:Teleport(BLOX_FRUITS_ID, LocalPlayer)
+        end)
     end
 end
 
-HopServer()
+return HopModule
