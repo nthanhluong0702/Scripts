@@ -64,20 +64,37 @@ if not successLoad or not ServerHopLib then
 end
 
 local function triggerServerHop()
-    local success, err = pcall(function()
-        game:GetService("TeleportService"):Teleport(game.PlaceId, game:GetService("Players").LocalPlayer)
-    end)
-    
-    if not success then
-        warn("[Hop Error]: Không thể đổi server:", err)
-    end
-end
-local successUI, Library = pcall(function()
-    return loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
-end)
+    local TeleportService = game:GetService("TeleportService")
+    local Players = game:GetService("Players")
+    local LocalPlayer = Players.LocalPlayer
+    local PlaceId = game.PlaceId
 
-if not successUI or not Library then
-    warn("[Kaitun System]: Không thể tải UI Fluent, script sẽ chạy ngầm không giao diện.")
+    local connection
+    connection = TeleportService.TeleportInitFailed:Connect(function(player, teleportResult, errorMessage)
+        if player == LocalPlayer then
+            warn("[Hop Error caught]: ", errorMessage)
+            task.wait(1)
+            pcall(function()
+                TeleportService:Teleport(PlaceId, LocalPlayer)
+            end)
+            if connection then
+                connection:Disconnect()
+            end
+        end
+    end)
+
+    local success, err = pcall(function()
+        TeleportService:Teleport(PlaceId, LocalPlayer)
+    end)
+
+    if not success then
+        warn("[Teleport Failed]:", err)
+        task.delay(3, function()
+            if connection then
+                connection:Disconnect()
+            end
+        end)
+    end
 end
 
 local Window = Library:CreateWindow({
