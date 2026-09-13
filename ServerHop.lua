@@ -3,44 +3,42 @@ local TeleportService = game:GetService("TeleportService")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
-local HubHop = {}
-HubHop.__index = HubHop
+local SafeServerHop = {}
+SafeServerHop.__index = SafeServerHop
 
-function HubHop:Hop()
-    local success, err = pcall(function()
-        local url = string.format("https://games.roblox.com/v1/games/%s/servers/Public?sortOrder=Asc&limit=100", game.PlaceId)
+function SafeServerHop:Hop()
+    local success = pcall(function()
+        local currentPlaceId = game.PlaceId
+        local url = string.format("https://games.roblox.com/v1/games/%s/servers/Public?sortOrder=Asc&limit=100", currentPlaceId)
+        
         local req = game:HttpGet(url)
         local body = HttpService:JSONDecode(req)
         
         if body and body.data then
-            local servers = {}
+            local validServers = {}
             for _, serv in ipairs(body.data) do
                 if type(serv) == "table" and serv.id and serv.id ~= game.JobId then
-                    if serv.playing < serv.maxPlayers and serv.playing >= 1 then
-                        table.insert(servers, serv.id)
+                    if serv.playing and serv.maxPlayers and serv.playing < serv.maxPlayers and serv.playing > 0 then
+                        table.insert(validServers, serv.id)
                     end
                 end
             end
             
-            if #servers > 0 then
-                local targetServer = servers[math.random(1, #servers)]
-                
-                local options = Instance.new("TeleportOptions")
-                options.ServerInstanceID = targetServer
-                
-                TeleportService:TeleportAsync(game.PlaceId, {LocalPlayer}, options)
+            if #validServers > 0 then
+                local randomServer = validServers[math.random(1, #validServers)]
+                TeleportService:TeleportToPlaceInstance(currentPlaceId, randomServer, LocalPlayer)
             else
-                TeleportService:Teleport(game.PlaceId, LocalPlayer)
+                TeleportService:Teleport(currentPlaceId, LocalPlayer)
             end
         else
-            TeleportService:Teleport(game.PlaceId, LocalPlayer)
+            TeleportService:Teleport(currentPlaceId, LocalPlayer)
         end
     end)
 
     if not success then
-        task.wait(2)
+        task.wait(1.5)
         TeleportService:Teleport(game.PlaceId, LocalPlayer)
     end
 end
 
-return HubHop
+return SafeServerHop
