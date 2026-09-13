@@ -69,7 +69,7 @@ local function triggerServerHop()
     if ScriptStatusBox then ScriptStatusBox:SetDesc("Đang tìm server sạch...") end
     
     pcall(function()
-        local queueTeleport = syn and syn.queue_on_teleport or queue_on_teleport
+        local queueTeleport = syn and syn.queue_on_teleport or queue_on_teleport or (fluxus and fluxus.queue_on_teleport)
         if queueTeleport and Config.Settings.BypassTeleport then
             queueTeleport([[
                 repeat task.wait() until game:IsLoaded()
@@ -86,14 +86,35 @@ local function triggerServerHop()
     end)
     
     if targetServer then
-        pcall(function()
+        print("[Hop]: Tìm thấy server ID:", targetServer)
+        if ScriptStatusBox then ScriptStatusBox:SetDesc("Đang bay sang server mới...") end
+        
+        local success, err = pcall(function()
             TeleportService:TeleportToPlaceInstance(PlaceID, targetServer, LocalPlayer)
         end)
+        
+        if not success then
+            warn("[Hop Error]: Lỗi TeleportToPlaceInstance:", err)
+            -- Nếu lỗi, kích hoạt Teleport thông thường ngay lập tức làm phương án dự phòng
+            pcall(function()
+                TeleportService:Teleport(PlaceID, LocalPlayer)
+            end)
+        end
     else
-        pcall(function()
-            ServerHopLib:Hop(2)
+        print("[Hop]: Không tìm thấy server từ module, đang dùng Teleport ngẫu nhiên...")
+        if ScriptStatusBox then ScriptStatusBox:SetDesc("Đang đổi server ngẫu nhiên...") end
+        
+        local success, err = pcall(function()
+            TeleportService:Teleport(PlaceID, LocalPlayer)
         end)
+        
+        if not success then
+            warn("[Hop Error]: Lỗi Teleport thường:", err)
+        end
     end
+    
+    task.wait(5)
+    isTeleporting = false
 end
 
 local successUI, Library = pcall(function()
