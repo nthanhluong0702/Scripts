@@ -624,8 +624,6 @@ local function scanAndProcessFruits()
     if not found then
         FruitStatusBox:SetDesc("No Fruit Found") 
         if HopModule then
-            HopModule.Settings.MinPlayers = 2
-            HopModule.Settings.MaxPlayers = 8
             HopModule:Hop()
         end
     end
