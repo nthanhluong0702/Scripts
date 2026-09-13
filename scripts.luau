@@ -78,6 +78,8 @@ local function triggerServerHop()
         end
     end)
     
+    local teleportSuccess = false
+
     local targetServer = nil
     pcall(function()
         if ServerHopLib.FindCleanServer then
@@ -86,37 +88,40 @@ local function triggerServerHop()
     end)
     
     if targetServer then
-        print("[Hop]: Tìm thấy server ID:", targetServer)
-        if ScriptStatusBox then ScriptStatusBox:SetDesc("Đang bay sang server mới...") end
+        print("[Hop]: Đang thử teleport vào instance:", targetServer)
+        if ScriptStatusBox then ScriptStatusBox:SetDesc("Đang bay vào server sạch...") end
         
         local success, err = pcall(function()
             TeleportService:TeleportToPlaceInstance(PlaceID, targetServer, LocalPlayer)
         end)
         
-        if not success then
-            warn("[Hop Error]: Lỗi TeleportToPlaceInstance:", err)
-            -- Nếu lỗi, kích hoạt Teleport thông thường ngay lập tức làm phương án dự phòng
-            pcall(function()
-                TeleportService:Teleport(PlaceID, LocalPlayer)
-            end)
+        if success then
+            teleportSuccess = true
+        else
+            warn("[Hop Warning]: Lỗi TeleportToPlaceInstance (có thể server đầy/lỗi):", err)
         end
-    else
-        print("[Hop]: Không tìm thấy server từ module, đang dùng Teleport ngẫu nhiên...")
+    end
+    
+    if not teleportSuccess then
+        print("[Hop]: Chuyển sang phương án Teleport ngẫu nhiên...")
         if ScriptStatusBox then ScriptStatusBox:SetDesc("Đang đổi server ngẫu nhiên...") end
         
         local success, err = pcall(function()
             TeleportService:Teleport(PlaceID, LocalPlayer)
         end)
         
-        if not success then
-            warn("[Hop Error]: Lỗi Teleport thường:", err)
+        if success then
+            teleportSuccess = true
+        else
+            warn("[Hop Error]: Lỗi Teleport ngẫu nhiên:", err)
         end
     end
     
-    task.wait(5)
-    isTeleporting = false
+    task.spawn(function()
+        task.wait(5)
+        isTeleporting = false
+    end)
 end
-
 local successUI, Library = pcall(function()
     return loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 end)
