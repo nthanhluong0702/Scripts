@@ -113,7 +113,7 @@ Tabs.Configuration:AddDropdown("Theme", {
     Callback = function(Value)
         Config.Settings.Theme = Value
         Library:SetTheme(Value)
-        saveConfig()
+        saveConfigToFile()
     end
 })
 
@@ -123,7 +123,7 @@ Tabs.Configuration:AddDropdown("TweenSpeed", {
     Default = Config.Settings.TweenSpeed,
     Callback = function(Value)
         Config.Settings.TweenSpeed = Value
-        saveConfig()
+        saveConfigToFile()
     end
 })
 
@@ -133,7 +133,7 @@ local FixLagToggle = Tabs.Configuration:AddToggle("FixLag", {
 })
 FixLagToggle:OnChanged(function(Value)
     Config.Settings.FixLagEnabled = Value
-    saveConfig()
+    saveConfigToFile()
 end)
 
 local BypassTeleportToggle = Tabs.Configuration:AddToggle("BypassTeleport", {
@@ -142,7 +142,7 @@ local BypassTeleportToggle = Tabs.Configuration:AddToggle("BypassTeleport", {
 })
 BypassTeleportToggle:OnChanged(function(Value)
     Config.Settings.BypassTeleport = Value
-    saveConfig()
+    saveConfigToFile()
 end)
 
 Tabs.Configuration:AddInput("HopDelay", {
@@ -155,7 +155,7 @@ Tabs.Configuration:AddInput("HopDelay", {
         local num = tonumber(Value)
         if num then 
             Config.Settings.HopDelay = num 
-            saveConfig()
+            saveConfigToFile()
         end
     end
 })
@@ -165,7 +165,7 @@ Tabs.Configuration:AddToggle("StartAutomation", {
     Default = Config.Settings.AutoHopWhenNoFruit,
     Callback = function(Value)
         Config.Settings.AutoHopWhenNoFruit = Value
-        saveConfig()
+        saveConfigToFile()
     end
 })
 
@@ -175,7 +175,7 @@ local AutoStoreToggle = Tabs.Configuration:AddToggle("StoreFruit", {
 })
 AutoStoreToggle:OnChanged(function(Value)
     Config.Settings.AutoStore = Value
-    saveConfig()
+    saveConfigToFile()
 end)
 
 local WebhookToggle = Tabs.Webhook:AddToggle("WebhookToggle", {
@@ -184,7 +184,7 @@ local WebhookToggle = Tabs.Webhook:AddToggle("WebhookToggle", {
 })
 WebhookToggle:OnChanged(function(Value)
     Config.Settings.WebhookStoreFruit.Enabled = Value
-    saveConfig()
+    saveConfigToFile()
 end)
 
 Tabs.Webhook:AddInput("WebhookUrlInput", {
@@ -195,7 +195,7 @@ Tabs.Webhook:AddInput("WebhookUrlInput", {
     Finished = true,
     Callback = function(Value)
         Config.Settings.WebhookStoreFruit.Url = Value
-        saveConfig()
+        saveConfigToFile()
     end
 })
 
