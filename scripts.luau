@@ -398,13 +398,14 @@ local function showGameNotification(titleText, descText, duration)
     end)
 end
 
-local function showFruitNotification(fruitName)
-    local currentJobId = game.JobId
-    Library:Notify({
-        Title = "Joining Server Have Fruit",
-        Content = string.format("Fruit Name: %s\nJobId: %s", tostring(fruitName), tostring(currentJobId)),
-        Duration = 6
-    })
+local function showNotification(fruitName, jobId)
+    pcall(function()
+        game:GetService("StarterGui"):SetCore("SendNotification", {
+            Title = "Joining Server Have Fruit",
+            Text = "Fruit Name: " .. tostring(fruitName) .. " JobId: " .. tostring(jobId),
+            Duration = 5
+        })
+    end)
 end
 
 local function advancedStoreFruit(fruitObj)
@@ -728,8 +729,7 @@ task.spawn(function()
                     ScriptStatusBox:SetDesc("Hopping to a new server...")
                     isTeleporting = true
                     task.wait(0.5)
-                    showFruitNotification("Joining Server Have Fruit")
-                    HopModule.Hop()
+                    HopModule.Hop(fruitName, jobId)
                 end
             else
                 timeWithoutFruit = 0
