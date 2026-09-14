@@ -6,10 +6,9 @@ local LocalPlayer = Players.LocalPlayer
 
 local BLOX_FRUITS_ID = 2753915549
 
-function HopModule.Hop
+function HopModule.Hop(fruitName, targetJobId)
     showNotification(fruitName or "Unknown", targetJobId or game.JobId)
     task.wait(0.5)
-
     pcall(function()
         if queue_on_teleport then
             queue_on_teleport([[
