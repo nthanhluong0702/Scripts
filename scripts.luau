@@ -613,22 +613,25 @@ local function scanAndProcessFruits()
             end
         end
         
+        local fruitPosition = Vector3.new(0, 0, 0)
+        pcall(function()
+            if targetObj and targetObj:FindFirstChild("Handle") then
+                fruitPosition = targetObj.Handle.Position
+            end
+        end)
+
         local storeResult = advancedStoreFruit(targetObj)
         
-        if storeResult == "Full" or storeResult == false then
+        if storeResult == "Full" then
             if ScriptStatusBox then ScriptStatusBox:SetDesc("Inventory Full or Already Owned!") end
             showGameNotification("Blox Fruits", "You already max out this fruit or your inventory is full!", 5)
             return true
-        elseif storeResult == true then
+        else
             if ScriptStatusBox then ScriptStatusBox:SetDesc("Fruit Stored Successfully!") end
             showGameNotification("Blox Fruits", "Successfully stored " .. targetData.name .. "!", 5)
             
             task.spawn(function()
-                local pos = Vector3.new(0, 0, 0)
-                if targetObj and targetObj:FindFirstChild("Handle") then
-                    pos = targetObj.Handle.Position
-                end
-                sendWebhook(targetData.name, pos, targetData.isDrop and "Drop" or "ServerSpawn")
+                sendWebhook(targetData.name, fruitPosition, targetData.isDrop and "Drop" or "ServerSpawn")
             end)
         end
     else
