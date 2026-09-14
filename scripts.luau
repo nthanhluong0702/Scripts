@@ -742,13 +742,3 @@ task.spawn(function()
         end
     end
 end)
-
-TeleportService.TeleportInitFailed:Connect(function(player, teleportResult, errorMessage)
-    if player == LocalPlayer then
-        warn("Teleport failed: " .. tostring(errorMessage) .. " -> Retrying hop...")
-        task.wait(2)
-        pcall(function()
-            HopModule.Hop()
-        end)
-    end
-end)
