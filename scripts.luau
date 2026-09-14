@@ -323,7 +323,8 @@ local function optimizePerformance()
 end
 
 local function sendWebhook(fruitName, position, spawnType)
-    local webhookUrl = Config.Settings.WebhookUrl
+    if not Config.Settings.WebhookStoreFruit.Enabled then return end
+    local webhookUrl = Config.Settings.WebhookStoreFruit.Url
     if not webhookUrl or webhookUrl == "" then return end
     
     local playerName = LocalPlayer.Name
@@ -334,7 +335,7 @@ local function sendWebhook(fruitName, position, spawnType)
         ["content"] = "",
         ["embeds"] = {{
             ["title"] = "🧸 [Blox Fruits] Found & Stored Fruit!",
-            ["color"] = 65280, -- Màu xanh lá bắt mắt
+            ["color"] = 65280,
             ["fields"] = {
                 {["name"] = "Player", ["value"] = "```" .. playerName .. "```", ["inline"] = true},
                 {["name"] = "Fruit Name", ["value"] = "```" .. tostring(fruitName) .. "```", ["inline"] = true},
@@ -621,6 +622,14 @@ local function scanAndProcessFruits()
         elseif storeResult == true then
             if ScriptStatusBox then ScriptStatusBox:SetDesc("Fruit Stored Successfully!") end
             showGameNotification("Blox Fruits", "Successfully stored " .. targetData.name .. "!", 5)
+            
+            task.spawn(function()
+                local pos = Vector3.new(0, 0, 0)
+                if targetObj and targetObj:FindFirstChild("Handle") then
+                    pos = targetObj.Handle.Position
+                end
+                sendWebhook(targetData.name, pos, targetData.isDrop and "Drop" or "ServerSpawn")
+            end)
         end
     else
         if FruitStatusBox then
