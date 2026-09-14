@@ -1,6 +1,4 @@
-if not game:IsLoaded() then
-    game.Loaded:Wait()
-end
+local HopModule = loadstring(game:HttpGet("https://raw.githubusercontent.com/nthanhluong0702/Scripts/refs/heads/main/ServerHop.lua"))()
 
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
@@ -409,26 +407,6 @@ local function showFruitNotification(fruitName)
     })
 end
 
-local function ServerHop()
-    local PlaceID = game.PlaceId
-    local AllIDs = {}
-    local success, result = pcall(function()
-        return HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. PlaceID .. "/servers/Public?sortOrder=Asc&limit=100"))
-    end)
-    
-    if success and result and result.data then
-        for _, v in pairs(result.data) do
-            if v.playing < v.maxPlayers and v.id ~= game.JobId then
-                table.insert(AllIDs, v.id)
-            end
-        end
-    end
-    
-    if #AllIDs > 0 then
-        TeleportService:TeleportToPlaceInstance(PlaceID, AllIDs[math.random(1, #AllIDs)], LocalPlayer)
-    end
-end
-
 local function advancedStoreFruit(fruitObj)
     if isStoring then return false end
     if not fruitObj or not fruitObj.Parent then return false end
@@ -749,10 +727,9 @@ task.spawn(function()
                 if timeWithoutFruit >= (Config.Settings.HopDelay or 5) then
                     ScriptStatusBox:SetDesc("Hopping to a new server...")
                     isTeleporting = true
-                    task.wait(1)
-                    
+                    task.wait(0.5)
                     showFruitNotification("Joining Server Have Fruit")
-                    ServerHop()
+                    HopModule.Hop()
                 end
             else
                 timeWithoutFruit = 0
