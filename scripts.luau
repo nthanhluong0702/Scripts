@@ -404,30 +404,78 @@ local function showFruitNotification(fruitName)
     })
 end
 
-local QueueTeleport = (syn and syn.queue_on_teleport) or queue_on_teleport or (fluxus and fluxus.queue_on_teleport)
-
-local function HubStyleHopDirect()
-    if QueueTeleport then
-        pcall(function()
-            QueueTeleport([[
-                task.spawn(function()
-                    repeat task.wait() until game:IsLoaded()
-                    task.wait(3)
-                end)
-            ]])
-        end)
-    end
-
-    local success, err = pcall(function()
-        TeleportService:Teleport(game.PlaceId, LocalPlayer)
-    end)
+local function HopServer()
+    if not getgenv().KaitunConfig.Enabled then return end
+    print("[ServerHop]: Đang tìm server trống để săn trái...")
     
-    if not success then
-        warn("[Hop Error] Thử kết nối lại lần nữa: " .. tostring(err))
-        task.wait(2)
-        pcall(function()
-            TeleportService:Teleport(game.PlaceId, LocalPlayer)
+    local servers = {}
+    local cursor = ""
+    local successAPI = false
+    local attempts = 0
+    
+    repeat
+        attempts = attempts + 1
+        local success = pcall(function()
+            local url = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100" .. (cursor ~= "" and "&cursor=" .. cursor or "")
+            local req = (syn and syn.request) or (http and http.request) or http_request or request
+            if req then
+                local response = req({Url = url, Method = "GET"})
+                if response and response.StatusCode == 200 then
+                    local data = HttpService:JSONDecode(response.Body)
+                    cursor = data.nextPageCursor or ""
+                    for _, server in ipairs(data.data) do
+                        if server.playing and server.maxPlayers and server.playing < server.maxPlayers - 2 and server.id ~= game.JobId then
+                            table.insert(servers, server.id)
+                        end
+                    end
+                    successAPI = true
+                end
+            end
         end)
+        
+        if not successAPI then
+            task.wait(2)
+        end
+    until successAPI or attempts >= 3
+    
+    if #servers > 0 then
+        for i = #servers, 2, -1 do
+            local j = math.random(i)
+            servers[i], servers[j] = servers[j], servers[i]
+        end
+        
+        local teleSuccess = false
+        for _, targetServerId in ipairs(servers) do
+            print("[ServerHop]: Đang thử chuyển sang server: " .. targetServerId)
+            
+            local teleAttempts = 0
+            repeat
+                teleAttempts = teleAttempts + 1
+                local status = pcall(function()
+                    TeleportService:TeleportToPlaceInstance(game.PlaceId, targetServerId, LocalPlayer)
+                end)
+                
+                if status then
+                    teleSuccess = true
+                    task.wait(8)
+                    break
+                else
+                    task.wait(1)
+                end
+            until teleAttempts >= 2
+            
+            if teleSuccess then break end
+        end
+        
+        if not teleSuccess then
+            print("[ServerHop]: Không thể kết nối tới các server trong danh sách, thử lại sau 5 giây...")
+            task.wait(5)
+            HopServer()
+        end
+    else
+        print("[ServerHop]: Không tìm thấy server phù hợp hoặc lỗi mạng, thử lại sau 5 giây...")
+        task.wait(5)
+        HopServer()
     end
 end
 
@@ -754,7 +802,7 @@ task.spawn(function()
                     task.wait(1)
                     
                     showFruitNotification("Joining Server Have Fruit")
-                    HubStyleHopDirect()
+                    HopServer()
                 end
             else
                 timeWithoutFruit = 0
