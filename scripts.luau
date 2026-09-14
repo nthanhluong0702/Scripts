@@ -27,7 +27,7 @@ local Config = {
     }
 }
 
-local HopModule = loadstring(game:HttpGet("https://raw.githubusercontent.com/nthanhluong0702/Scripts/refs/heads/main/ServerHop.lua"))()
+local AdvancedHop = loadstring(game:HttpGet("https://raw.githubusercontent.com/nthanhluong0702/Scripts/refs/heads/main/ServerHop.lua"))()
 
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
@@ -730,7 +730,7 @@ task.spawn(function()
                     task.wait(1)
                     
                     showFruitNotification("Joining Server Have Fruit")
-                    HopModule.Hop()
+                    AdvancedHop.Hop()
                 end
             else
                 timeWithoutFruit = 0
