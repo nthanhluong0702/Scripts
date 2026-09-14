@@ -22,8 +22,8 @@ local ExternalConfig = getgenv().KaitunFruit or {}
 
 local LoadedConfig = {}
 pcall(function()
-    if readfile and isfile and isfile(FileName) then
-        LoadedConfig = HttpService:JSONDecode(readfile(FileName))
+    if readfile and isfile and isfile("FearzFuitConfig.json") then
+        LoadedConfig = HttpService:JSONDecode(readfile("FearzFuitConfig.json"))
     end
 end)
 
@@ -398,6 +398,25 @@ local function showGameNotification(titleText, descText, duration)
     end)
 end
 
+local function showServerHopNotification(fruitName)
+    local currentJobId = game.JobId
+    pcall(function()
+        StarterGui:SetCore("SendNotification", {
+            Title = "Joining Server Have Fruit",
+            Text = string.format("Fruit Name: %s JobId:\n%s", tostring(fruitName), tostring(currentJobId)),
+            Duration = 6
+        })
+    end)
+    
+    pcall(function()
+        Library:Notify({
+            Title = "Joining Server Have Fruit",
+            Content = string.format("Fruit Name: %s\nJobId: %s", tostring(fruitName), tostring(currentJobId)),
+            Duration = 6
+        })
+    end)
+end
+
 local function advancedStoreFruit(fruitObj)
     if isStoring then return false end
     if not fruitObj or not fruitObj.Parent then return false end
@@ -452,7 +471,7 @@ local function collectDroppedFruitInstant(fruitObj)
     local handle = fruitObj.Handle
     
     if ScriptStatusBox then 
-        ScriptStatusBox:SetDesc("Collect fruit dropped: " .. fruitObj.Name) 
+        ScriptStatusBox:SetDesc("Collect fruit dropped: " + fruitObj.Name) 
     end
     
     local startTime = os.clock()
@@ -663,6 +682,11 @@ local function scanAndProcessFruits()
         if storeResult == "Full" then
             if ScriptStatusBox then ScriptStatusBox:SetDesc("Inventory Full or Already Owned!") end
             showGameNotification("Blox Fruits", "You already max out this fruit or your inventory is full!", 5)
+            
+            showServerHopNotification(targetData.name)
+            task.wait(1)
+            isTeleporting = true
+            HopModule.Hop()
             return true
         else
             if ScriptStatusBox then ScriptStatusBox:SetDesc("Fruit Stored Successfully!") end
@@ -717,8 +741,9 @@ task.spawn(function()
                 
                 if timeWithoutFruit >= (Config.Settings.HopDelay or 5) then
                     ScriptStatusBox:SetDesc("Hopping to a new server...")
+                    showServerHopNotification("Fruits")
+                    task.wait(1)
                     isTeleporting = true
-                    task.wait(0.5)
                     HopModule.Hop()
                 end
             else
