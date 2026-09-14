@@ -335,7 +335,7 @@ local function sendWebhook(fruitName, spawnType)
             ["fields"] = {
                 {["name"] = "Player", ["value"] = "```" .. playerName .. "```", ["inline"] = true},
                 {["name"] = "Fruit Name", ["value"] = "```" .. tostring(fruitName) .. "```", ["inline"] = true},
-                {["name"] = "Spawn Type", ["value"] = "```" .. tostring(spawnType) .. "```", ["inline"] = true}
+                {["name"] = "Spawn Type", ["value"] = "```" .. tostring(spawnType) .. "```", ["inline"] = true},
             ["footer"] = {
                 ["text"] = "Fearz Hub • " .. os.date("%H:%M:%S - %d/%m/%Y")
             }
