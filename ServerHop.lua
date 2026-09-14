@@ -6,7 +6,7 @@ local LocalPlayer = Players.LocalPlayer
 
 local BLOX_FRUITS_ID = 2753915549
 
-function HopModule.Hop(fruitName, targetJobId)
+function HopModule.Hop
     showNotification(fruitName or "Unknown", targetJobId or game.JobId)
     task.wait(0.5)
 
