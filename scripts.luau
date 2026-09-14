@@ -1,3 +1,20 @@
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+local HttpService = game:GetService("HttpService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TeleportService = game:GetService("TeleportService")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local PlaceId = game.PlaceId
+local StarterGui = game:GetService("StarterGui")
+local LocalPlayer = Players.LocalPlayer
+local isTeleporting = false
+local isTweening = false
+local currentTween = nil
+local noclipConnection = nil
+local isStoring = false
+local CommF_Cache = nil
+
 local ExternalConfig = getgenv().KaitunFruit or {}
 
 local LoadedConfig = {}
@@ -26,26 +43,6 @@ local Config = {
         AutoHopWhenNoFruit = LoadedConfig.Start ~= nil and LoadedConfig.Start or true,
     }
 }
-
-local AdvancedHop = loadstring(game:HttpGet("https://raw.githubusercontent.com/nthanhluong0702/Scripts/refs/heads/main/ServerHop.lua"))()
-
-local Players = game:GetService("Players")
-local Workspace = game:GetService("Workspace")
-local HttpService = game:GetService("HttpService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local TeleportService = game:GetService("TeleportService")
-local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
-local PlaceId = game.PlaceId
-local StarterGui = game:GetService("StarterGui")
-
-local LocalPlayer = Players.LocalPlayer
-local isTeleporting = false
-local isTweening = false
-local currentTween = nil
-local noclipConnection = nil
-local isStoring = false
-local CommF_Cache = nil
 
 local successUI, Library = pcall(function()
     return loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
@@ -407,6 +404,35 @@ local function showFruitNotification(fruitName)
     })
 end
 
+local function SafeHop()
+    local success, result = pcall(function()
+        local url = "https://games.roblox.com/v1/games/" .. PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"
+        return HttpService:JSONDecode(game:HttpGet(url))
+    end)
+    
+    if success and result and result.data then
+        local servers = {}
+        for _, server in ipairs(result.data) do
+            if type(server) == "table" and server.playing < server.maxPlayers and server.id ~= game.JobId then
+                if server.playing <= 4 then
+                    table.insert(servers, server.id)
+                end
+            end
+        end
+        
+        if #servers > 0 then
+            local target = servers[math.random(1, #servers)]
+            pcall(function()
+                TeleportService:TeleportToPlaceInstance(PlaceId, target, LocalPlayer)
+            end)
+        else
+            TeleportService:Teleport(PlaceId, LocalPlayer)
+        end
+    else
+        TeleportService:Teleport(PlaceId, LocalPlayer)
+    end
+end
+
 local function advancedStoreFruit(fruitObj)
     if isStoring then return false end
     if not fruitObj or not fruitObj.Parent then return false end
@@ -730,7 +756,7 @@ task.spawn(function()
                     task.wait(1)
                     
                     showFruitNotification("Joining Server Have Fruit")
-                    AdvancedHop.Hop()
+                    SafeHop()
                 end
             else
                 timeWithoutFruit = 0
