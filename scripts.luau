@@ -404,32 +404,30 @@ local function showFruitNotification(fruitName)
     })
 end
 
-local function SafeHop()
-    local success, result = pcall(function()
-        local url = "https://games.roblox.com/v1/games/" .. PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"
-        return HttpService:JSONDecode(game:HttpGet(url))
+local QueueTeleport = (syn and syn.queue_on_teleport) or queue_on_teleport or (fluxus and fluxus.queue_on_teleport)
+
+local function HubStyleHopDirect()
+    if QueueTeleport then
+        pcall(function()
+            QueueTeleport([[
+                task.spawn(function()
+                    repeat task.wait() until game:IsLoaded()
+                    task.wait(3)
+                end)
+            ]])
+        end)
+    end
+
+    local success, err = pcall(function()
+        TeleportService:Teleport(game.PlaceId, LocalPlayer)
     end)
     
-    if success and result and result.data then
-        local servers = {}
-        for _, server in ipairs(result.data) do
-            if type(server) == "table" and server.playing < server.maxPlayers and server.id ~= game.JobId then
-                if server.playing <= 4 then
-                    table.insert(servers, server.id)
-                end
-            end
-        end
-        
-        if #servers > 0 then
-            local target = servers[math.random(1, #servers)]
-            pcall(function()
-                TeleportService:TeleportToPlaceInstance(PlaceId, target, LocalPlayer)
-            end)
-        else
-            TeleportService:Teleport(PlaceId, LocalPlayer)
-        end
-    else
-        TeleportService:Teleport(PlaceId, LocalPlayer)
+    if not success then
+        warn("[Hop Error] Thử kết nối lại lần nữa: " .. tostring(err))
+        task.wait(2)
+        pcall(function()
+            TeleportService:Teleport(game.PlaceId, LocalPlayer)
+        end)
     end
 end
 
@@ -756,7 +754,7 @@ task.spawn(function()
                     task.wait(1)
                     
                     showFruitNotification("Joining Server Have Fruit")
-                    SafeHop()
+                    HubStyleHopDirect()
                 end
             else
                 timeWithoutFruit = 0
