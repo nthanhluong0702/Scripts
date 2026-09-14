@@ -729,7 +729,7 @@ task.spawn(function()
                     ScriptStatusBox:SetDesc("Hopping to a new server...")
                     isTeleporting = true
                     task.wait(0.5)
-                    HopModule.Hop(fruitName, game.JobId)
+                    HopModule.Hop(fruitName, targetJobId)
                 end
             else
                 timeWithoutFruit = 0
