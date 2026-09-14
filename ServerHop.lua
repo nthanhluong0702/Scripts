@@ -1,75 +1,74 @@
-local HttpService = game:GetService("HttpService")
 local TeleportService = game:GetService("TeleportService")
+local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
-local HopModule = {}
+local AdvancedHop = {}
 
-local function getServers(cursor)
-    local PlaceID = game.PlaceId
-    local url = "https://games.roblox.com/v1/games/" .. PlaceID .. "/servers/Public?sortOrder=Asc&limit=100"
-    if cursor then
-        url = url .. "&cursor=" .. cursor
-    end
-    
-    local success, result = pcall(function()
-        return HttpService:JSONDecode(game:HttpGet(url))
-    end)
-    
-    if success and type(result) == "table" then
-        return result
-    end
-    return nil
-end
-
-function HopModule.Hop()
-    local PlaceID = game.PlaceId
-    local AllIDs = {}
-    local cursor = nil
+function AdvancedHop.Hop()
+    local placeId = game.PlaceId
+    local servers = {}
+    local cursor = ""
     
     repeat
-        local data = getServers(cursor)
-        if data and data.data then
-            for _, server in ipairs(data.data) do
+        local url = "https://games.roblox.com/v1/games/" .. placeId .. "/servers/Public?sortOrder=Asc&limit=100"
+        if cursor ~= "" then
+            url = url .. "&cursor=" .. cursor
+        end
+        
+        local success, response = pcall(function()
+            return HttpService:JSONDecode(game:HttpGet(url))
+        end)
+        
+        if success and response and response.data then
+            for _, server in ipairs(response.data) do
                 if type(server) == "table" and server.playing < server.maxPlayers and server.id ~= game.JobId then
-                    if server.playing > 0 then 
-                        table.insert(AllIDs, server.id)
+                    if server.playing >= 1 then
+                        table.insert(servers, server.id)
                     end
                 end
             end
-            cursor = data.nextPageCursor
+            cursor = response.nextPageCursor
         else
             break
         end
-    until not cursor or #AllIDs >= 20
+    until cursor == nil or #servers >= 30
 
-    if #AllIDs == 0 then
-        local data = getServers()
-        if data and data.data then
-            for _, server in ipairs(data.data) do
+    if #servers == 0 then
+        local success, response = pcall(function()
+            return HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. placeId .. "/servers/Public?sortOrder=Asc&limit=100"))
+        end)
+        if success and response and response.data then
+            for _, server in ipairs(response.data) do
                 if type(server) == "table" and server.playing < server.maxPlayers and server.id ~= game.JobId then
-                    table.insert(AllIDs, server.id)
+                    table.insert(servers, server.id)
                 end
             end
         end
     end
 
-    if #AllIDs > 0 then
-        local targetServerId = AllIDs[math.random(1, #AllIDs)]
-        local tpSuccess, tpError = pcall(function()
-            TeleportService:TeleportToPlaceInstance(PlaceID, targetServerId, LocalPlayer)
-        end)
+    if #servers > 0 then
+        local targetServer = servers[math.random(1, #servers)]
         
-        if not tpSuccess then
-            warn("Lỗi dịch chuyển, đang thử lại...", tpError)
+        local teleportOptions = Instance.new("TeleportOptions")
+        teleportOptions.ServerInstanceId = targetServer
+
+        local success, err = pcall(function()
+            TeleportService:TeleportAsync(placeId, {LocalPlayer}, teleportOptions)
+        end)
+
+        if not success then
+            warn("Lỗi chuyển hướng, đang ép thực hiện lại lần 2...", err)
             task.wait(1)
-            HopModule.Hop()
+            pcall(function()
+                TeleportService:TeleportToPlaceInstance(placeId, targetServer, LocalPlayer)
+            end)
         end
     else
-        warn("Không tìm thấy server phù hợp, thử lại sau 3 giây.")
-        task.wait(3)
-        HopModule.Hop()
+        warn("Không tìm thấy server phù hợp, đang quét lại...")
+        task.wait(2)
+        AdvancedHop.Hop()
     end
 end
 
-return HopModule
+return AdvancedHop
