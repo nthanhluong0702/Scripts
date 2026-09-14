@@ -410,9 +410,6 @@ local function showFruitNotification(fruitName)
 end
 
 local function HopServer()
-    if not getgenv().KaitunConfig.Enabled then return end
-    print("[ServerHop]: Đang tìm server trống để săn trái...")
-    
     local servers = {}
     local cursor = ""
     local successAPI = false
@@ -807,7 +804,6 @@ task.spawn(function()
                     task.wait(1)
                     
                     showFruitNotification("Joining Server Have Fruit")
-                    HopServer()
                 end
             else
                 timeWithoutFruit = 0
