@@ -1,74 +1,53 @@
+local HopModule = {}
 local TeleportService = game:GetService("TeleportService")
-local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
+local HttpService = game:GetService("HttpService")
 local LocalPlayer = Players.LocalPlayer
 
-local AdvancedHop = {}
+local BLOX_FRUITS_ID = 2753915549
 
-function AdvancedHop.Hop()
-    local placeId = game.PlaceId
-    local servers = {}
-    local cursor = ""
-    
-    repeat
-        local url = "https://games.roblox.com/v1/games/" .. placeId .. "/servers/Public?sortOrder=Asc&limit=100"
-        if cursor ~= "" then
-            url = url .. "&cursor=" .. cursor
+function HopModule.Hop()
+    pcall(function()
+        if queue_on_teleport then
+            queue_on_teleport([[
+                task.spawn(function()
+                    repeat task.wait() until game:IsLoaded()
+                end)
+            ]])
         end
-        
-        local success, response = pcall(function()
-            return HttpService:JSONDecode(game:HttpGet(url))
+    end)
+
+    local successAPI, response = pcall(function()
+        return game:HttpGet("https://games.roblox.com/v1/games/" .. BLOX_FRUITS_ID .. "/servers/Public?sortOrder=Asc&limit=10")
+    end)
+
+    if successAPI and response then
+        local decoded, data = pcall(function()
+            return HttpService:JSONDecode(response)
         end)
         
-        if success and response and response.data then
-            for _, server in ipairs(response.data) do
-                if type(server) == "table" and server.playing < server.maxPlayers and server.id ~= game.JobId then
-                    if server.playing >= 1 then
-                        table.insert(servers, server.id)
-                    end
-                end
-            end
-            cursor = response.nextPageCursor
-        else
-            break
-        end
-    until cursor == nil or #servers >= 30
-
-    if #servers == 0 then
-        local success, response = pcall(function()
-            return HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. placeId .. "/servers/Public?sortOrder=Asc&limit=100"))
-        end)
-        if success and response and response.data then
-            for _, server in ipairs(response.data) do
-                if type(server) == "table" and server.playing < server.maxPlayers and server.id ~= game.JobId then
-                    table.insert(servers, server.id)
+        if decoded and data and data.data then
+            for _, server in ipairs(data.data) do
+                if server.playing and server.playing < (server.maxPlayers or 10) and server.id ~= game.JobId then
+                    local teleSuccess = pcall(function()
+                        TeleportService:TeleportToPlaceInstance(BLOX_FRUITS_ID, server.id, LocalPlayer)
+                    end)
+                    if teleSuccess then return end
                 end
             end
         end
     end
 
-    if #servers > 0 then
-        local targetServer = servers[math.random(1, #servers)]
-        
-        local teleportOptions = Instance.new("TeleportOptions")
-        teleportOptions.ServerInstanceId = targetServer
+    local success = pcall(function()
+        TeleportService:Teleport(BLOX_FRUITS_ID, LocalPlayer)
+    end)
 
-        local success, err = pcall(function()
-            TeleportService:TeleportAsync(placeId, {LocalPlayer}, teleportOptions)
-        end)
-
-        if not success then
-            warn("Lỗi chuyển hướng, đang ép thực hiện lại lần 2...", err)
-            task.wait(1)
-            pcall(function()
-                TeleportService:TeleportToPlaceInstance(placeId, targetServer, LocalPlayer)
-            end)
-        end
-    else
-        warn("Không tìm thấy server phù hợp, đang quét lại...")
+    if not success then
         task.wait(2)
-        AdvancedHop.Hop()
+        pcall(function()
+            TeleportService:Teleport(BLOX_FRUITS_ID, LocalPlayer)
+        end)
     end
 end
 
-return AdvancedHop
+return HopModule
