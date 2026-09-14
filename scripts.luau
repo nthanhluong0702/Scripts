@@ -322,27 +322,20 @@ local function optimizePerformance()
     end)
 end
 
-local function sendWebhook(fruitName, position, spawnType)
+local function sendWebhook(fruitName, spawnType)
     if not Config.Settings.WebhookStoreFruit.Enabled then return end
     local webhookUrl = Config.Settings.WebhookStoreFruit.Url
     if not webhookUrl or webhookUrl == "" then return end
     
-    local playerName = LocalPlayer.Name
-    local jobId = game.JobId
-    local placeId = game.PlaceId
-    
     local data = {
         ["content"] = "",
         ["embeds"] = {{
-            ["title"] = "🧸 [Blox Fruits] Found & Stored Fruit!",
-            ["color"] = 65280,
+            ["title"] = "Fruit Finder",
+            ["color"] = 65535,
             ["fields"] = {
                 {["name"] = "Player", ["value"] = "```" .. playerName .. "```", ["inline"] = true},
                 {["name"] = "Fruit Name", ["value"] = "```" .. tostring(fruitName) .. "```", ["inline"] = true},
-                {["name"] = "Spawn Type", ["value"] = "```" .. tostring(spawnType) .. "```", ["inline"] = true},
-                {["name"] = "Position", ["value"] = string.format("```X: %.1f, Y: %.1f, Z: %.1f```", position.X, position.Y, position.Z), ["inline"] = false},
-                {["name"] = "JobId (Join Server)", ["value"] = "```lua\ngame:GetService('TeleportService'):TeleportToPlaceInstance(" .. placeId .. ", '" .. jobId .. "', game.Players.LocalPlayer)\n```", ["inline"] = false}
-            },
+                {["name"] = "Spawn Type", ["value"] = "```" .. tostring(spawnType) .. "```", ["inline"] = true}
             ["footer"] = {
                 ["text"] = "Fearz Hub • " .. os.date("%H:%M:%S - %d/%m/%Y")
             }
@@ -361,7 +354,6 @@ local function sendWebhook(fruitName, position, spawnType)
         end
     end)
 end
-
 local function selectTeam()
     pcall(function()
         if LocalPlayer.Team == nil or LocalPlayer.Team.Name ~= Config.Team then
