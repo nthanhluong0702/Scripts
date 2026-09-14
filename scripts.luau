@@ -323,8 +323,7 @@ local function optimizePerformance()
 end
 
 local function sendWebhook(fruitName, position, spawnType)
-    if not Config.Settings.WebhookStoreFruit.Enabled then return end
-    local webhookUrl = Config.Settings.WebhookStoreFruit.Url
+    local webhookUrl = Config.Settings.WebhookUrl
     if not webhookUrl or webhookUrl == "" then return end
     
     local playerName = LocalPlayer.Name
@@ -335,7 +334,7 @@ local function sendWebhook(fruitName, position, spawnType)
         ["content"] = "",
         ["embeds"] = {{
             ["title"] = "🧸 [Blox Fruits] Found & Stored Fruit!",
-            ["color"] = 65280,
+            ["color"] = 65280, -- Màu xanh lá bắt mắt
             ["fields"] = {
                 {["name"] = "Player", ["value"] = "```" .. playerName .. "```", ["inline"] = true},
                 {["name"] = "Fruit Name", ["value"] = "```" .. tostring(fruitName) .. "```", ["inline"] = true},
@@ -344,26 +343,22 @@ local function sendWebhook(fruitName, position, spawnType)
                 {["name"] = "JobId (Join Server)", ["value"] = "```lua\ngame:GetService('TeleportService'):TeleportToPlaceInstance(" .. placeId .. ", '" .. jobId .. "', game.Players.LocalPlayer)\n```", ["inline"] = false}
             },
             ["footer"] = {
-                ["text"] = "Fear Hub • " .. os.date("%H:%M:%S - %d/%m/%Y")
+                ["text"] = "Fearz Hub • " .. os.date("%H:%M:%S - %d/%m/%Y")
             }
         }}
     }
     
-    local success, encodedData = pcall(function()
-        return HttpService:JSONEncode(data)
+    pcall(function()
+        local requestFunc = syn and syn.request or http and http.request or http_request or request
+        if requestFunc then
+            requestFunc({
+                Url = webhookUrl,
+                Method = "POST",
+                Headers = {["Content-Type"] = "application/json"},
+                Body = HttpService:JSONEncode(data)
+            })
+        end
     end)
-
-    if success then
-        pcall(function()
-            if syn and syn.request then
-                syn.request({ Url = webhookUrl, Method = "POST", Headers = {["Content-Type"] = "application/json"}, Body = encodedData })
-            elseif request then
-                request({ Url = webhookUrl, Method = "POST", Headers = {["Content-Type"] = "application/json"}, Body = encodedData })
-            else
-                HttpService:PostAsync(webhookUrl, encodedData)
-            end
-        end)
-    end
 end
 
 local function selectTeam()
@@ -626,10 +621,6 @@ local function scanAndProcessFruits()
         elseif storeResult == true then
             if ScriptStatusBox then ScriptStatusBox:SetDesc("Fruit Stored Successfully!") end
             showGameNotification("Blox Fruits", "Successfully stored " .. targetData.name .. "!", 5)
-            
-            pcall(function()
-                sendWebhook(targetData.name, targetObj.Handle and targetObj.Handle.Position or Vector3.new(0,0,0), targetData.isDrop and "Drop" or "ServerSpawn")
-            end)
         end
     else
         if FruitStatusBox then
