@@ -344,7 +344,7 @@ local function sendWebhook(fruitName, position, spawnType)
                 {["name"] = "JobId (Join Server)", ["value"] = "```lua\ngame:GetService('TeleportService'):TeleportToPlaceInstance(" .. placeId .. ", '" .. jobId .. "', game.Players.LocalPlayer)\n```", ["inline"] = false}
             },
             ["footer"] = {
-                ["text"] = "Fearz Hub â€¢ " .. os.date("%H:%M:%S - %d/%m/%Y")
+                ["text"] = "Fearz Hub • " .. os.date("%H:%M:%S - %d/%m/%Y")
             }
         }}
     }
@@ -458,63 +458,107 @@ end
 local function collectDroppedFruitInstant(fruitObj)
     if not fruitObj or not fruitObj.Parent or not fruitObj:FindFirstChild("Handle") then return end
     
-    local char = LocalPlayer.Character
-    local hrp = char and char:FindFirstChild("HumanoidRootPart")
-    local humanoid = char and char:FindFirstChildOfClass("Humanoid")
-    
-    if not hrp or not humanoid then return end
-    
     local handle = fruitObj.Handle
     
-    if ScriptStatusBox then ScriptStatusBox:SetDesc("Pulling dropped fruit: " .. fruitObj.Name) end
+    if ScriptStatusBox then 
+        ScriptStatusBox:SetDesc("Collect fruit dropped: " .. fruitObj.Name) 
+    end
     
-    local originalCFrame = hrp.CFrame
-    
-    humanoid.PlatformStand = true
-    if startNoclip then startNoclip() end
-    hrp.Anchored = false
-    
-    local startTime = tick()
+    local startTime = os.clock()
     repeat
         task.wait()
         pcall(function()
-            if fruitObj.Parent and handle.Parent then
-                hrp.CFrame = handle.CFrame + Vector3.new(0, 0.5, 0)
-                
+            local char = LocalPlayer.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            
+            if hrp and fruitObj.Parent and handle.Parent then
                 if firetouchinterest then
                     firetouchinterest(hrp, handle, 0)
                     firetouchinterest(hrp, handle, 1)
+                else
+                    handle.CFrame = hrp.CFrame + Vector3.new(0, 1, 0)
                 end
             end
         end)
-    until not fruitObj.Parent or not handle.Parent or (tick() - startTime > 2.5)
-    
-    hrp.CFrame = originalCFrame
-    hrp.Anchored = false
-    humanoid.PlatformStand = false
-    if stopNoclip then stopNoclip() end
+    until not fruitObj.Parent or not handle.Parent or (os.clock() - startTime > 1.5)
 end
 
 local function collectServerFruit(fruitObj, fruitName)
     if not fruitObj or not fruitObj.Parent or not fruitObj:FindFirstChild("Handle") then return false end
     
-    if ScriptStatusBox then ScriptStatusBox:SetDesc("Tweening to spawn fruit: " .. fruitName) end
-    
     local handle = fruitObj.Handle
     local targetCF = handle.CFrame + Vector3.new(0, 3, 0)
+    
+    local islandName = "Island"
+    pcall(function()
+        local locations = workspace:FindFirstChild("_WorldOrigin") and workspace._WorldOrigin:FindFirstChild("Locations")
+        if locations then
+            local minDist = math.huge
+            for _, v in ipairs(locations:GetChildren()) do
+                local pos = v:IsA("Model") and v:GetModelPivot().Position or (v:IsA("BasePart") and v.Position)
+                if pos then
+                    local dist = (targetCF.Position - pos).Magnitude
+                    if dist < minDist then
+                        minDist = dist
+                        islandName = v.Name
+                    end
+                end
+            end
+        end
+    end)
+    
+    local char = LocalPlayer.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    
+    if hrp then
+        hrp.CFrame = targetCF
+    end
+    
+    task.wait(0.5)
+    
+    for i = 1, 5 do
+        if not fruitObj.Parent or not handle.Parent then break end
+        
+        if ScriptStatusBox then 
+            ScriptStatusBox:SetDesc("Bypass to " .. islandName) 
+        end
+        
+        pcall(function()
+            local currentHumanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            if currentHumanoid then
+                currentHumanoid.Health = 0
+            end
+        end)
+        
+        local respawnStart = os.clock()
+        repeat
+            task.wait(0.2)
+            local currentHum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        until (currentHum and currentHum.Health > 0) or (os.clock() - respawnStart > 5)
+        
+        task.wait(0.5)
+    end
+    
+    if ScriptStatusBox then 
+        ScriptStatusBox:SetDesc("Bypass done, count: 5") 
+    end
+    
+    if not fruitObj.Parent or not handle.Parent then return false end
+    
+    if ScriptStatusBox then ScriptStatusBox:SetDesc("Tweening to collect fruit: " .. fruitName) end
     
     local tweenDone = false
     task.spawn(function()
         pcall(function()
             if optimizedTweenTo then
-                optimizedTweenTo(targetCF)
+                optimizedTweenTo(handle.CFrame + Vector3.new(0, 3, 0))
             end
         end)
         tweenDone = true
     end)
     
-    local waitStart = tick()
-    while not tweenDone and (tick() - waitStart < 8) do
+    local waitStart = os.clock()
+    while not tweenDone and (os.clock() - waitStart < 8) do
         task.wait(0.1)
         if not fruitObj.Parent or not handle.Parent then 
             tweenDone = true
@@ -524,18 +568,18 @@ local function collectServerFruit(fruitObj, fruitName)
     
     task.wait(0.1)
     
-    local startTime = tick()
+    local startTime = os.clock()
     repeat
         task.wait()
         pcall(function()
-            local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-            if hrp and handle.Parent and firetouchinterest then
-                hrp.CFrame = handle.CFrame
-                firetouchinterest(hrp, handle, 0)
-                firetouchinterest(hrp, handle, 1)
+            local currentHrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+            if currentHrp and handle.Parent and firetouchinterest then
+                currentHrp.CFrame = handle.CFrame
+                firetouchinterest(currentHrp, handle, 0)
+                firetouchinterest(currentHrp, handle, 1)
             end
         end)
-    until not fruitObj.Parent or not handle.Parent or (tick() - startTime > 2)
+    until not fruitObj.Parent or not handle.Parent or (os.clock() - startTime > 2)
     
     return true
 end
@@ -553,6 +597,170 @@ local function scanAndProcessFruits()
             if item:IsA("Tool") and item:FindFirstChild("Handle") then
                 local name = item.Name
                 if not isBlacklisted(name) and string.find(name, "Fruit") then
+                    table.insert(collectedList, {
+                        obj = item,
+                        name = name,
+                        isDrop = isDrop,
+                        priority = isDrop and 1 or 2 
+                    })
+                end
+            end
+        end
+        
+        if fruitSpawnsFolder then
+            for _, fruit in ipairs(fruitSpawnsFolder:GetChildren()) do
+                evaluateAndAdd(fruit, false)
+            end
+        end
+        
+        if dropsFolder then
+            for _, fruit in ipairs(dropsFolder:GetChildren()) do
+                evaluateAndAdd(fruit, true)
+            end
+local function collectDroppedFruitInstant(fruitObj)
+    if not fruitObj or not fruitObj.Parent or not fruitObj:FindFirstChild("Handle") then return end
+    
+    local handle = fruitObj.Handle
+    
+    if ScriptStatusBox then 
+        ScriptStatusBox:SetDesc("Đang nhặt trái: " .. fruitObj.Name) 
+    end
+    
+    local startTime = os.clock()
+    repeat
+        task.wait()
+        pcall(function()
+            local char = LocalPlayer.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            
+            if hrp and fruitObj.Parent and handle.Parent then
+                if firetouchinterest then
+                    firetouchinterest(hrp, handle, 0)
+                    firetouchinterest(hrp, handle, 1)
+                else
+                    handle.CFrame = hrp.CFrame + Vector3.new(0, 1, 0)
+                end
+            end
+        end)
+    until not fruitObj.Parent or not handle.Parent or (os.clock() - startTime > 1.5)
+end
+
+local function collectServerFruit(fruitObj, fruitName)
+    if not fruitObj or not fruitObj.Parent or not fruitObj:FindFirstChild("Handle") then return false end
+    
+    local handle = fruitObj.Handle
+    local targetCF = handle.CFrame + Vector3.new(0, 3, 0)
+    
+    local islandName = "Island"
+    pcall(function()
+        local locations = workspace:FindFirstChild("_WorldOrigin") and workspace._WorldOrigin:FindFirstChild("Locations")
+        if locations then
+            local minDist = math.huge
+            for _, v in ipairs(locations:GetChildren()) do
+                local pos = v:IsA("Model") and v:GetModelPivot().Position or (v:IsA("BasePart") and v.Position)
+                if pos then
+                    local dist = (targetCF.Position - pos).Magnitude
+                    if dist < minDist then
+                        minDist = dist
+                        islandName = v.Name
+                    end
+                end
+            end
+        end
+    end)
+    
+    local char = LocalPlayer.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    
+    if hrp then
+        hrp.CFrame = targetCF
+    end
+    
+    task.wait(0.5)
+    
+    for i = 1, 5 do
+        if not fruitObj.Parent or not handle.Parent then break end
+        
+        if ScriptStatusBox then 
+            ScriptStatusBox:SetDesc("Bypass to " .. islandName) 
+        end
+        
+        pcall(function()
+            local currentHumanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            if currentHumanoid then
+                currentHumanoid.Health = 0
+            end
+        end)
+        
+        local respawnStart = os.clock()
+        repeat
+            task.wait(0.2)
+            local currentHum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        until (currentHum and currentHum.Health > 0) or (os.clock() - respawnStart > 5)
+        
+        task.wait(0.5)
+    end
+    
+    if ScriptStatusBox then 
+        ScriptStatusBox:SetDesc("Bypass done, count: 5") 
+    end
+    
+    if not fruitObj.Parent or not handle.Parent then return false end
+    
+    if ScriptStatusBox then ScriptStatusBox:SetDesc("Tweening to collect fruit: " .. fruitName) end
+    
+    local tweenDone = false
+    task.spawn(function()
+        pcall(function()
+            if optimizedTweenTo then
+                optimizedTweenTo(handle.CFrame + Vector3.new(0, 3, 0))
+            end
+        end)
+        tweenDone = true
+    end)
+    
+    local waitStart = os.clock()
+    while not tweenDone and (os.clock() - waitStart < 8) do
+        task.wait(0.1)
+        if not fruitObj.Parent or not handle.Parent then 
+            tweenDone = true
+            break 
+        end
+    end
+    
+    task.wait(0.1)
+    
+    local startTime = os.clock()
+    repeat
+        task.wait()
+        pcall(function()
+            local currentHrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+            if currentHrp and handle.Parent and firetouchinterest then
+                currentHrp.CFrame = handle.CFrame
+                firetouchinterest(currentHrp, handle, 0)
+                firetouchinterest(currentHrp, handle, 1)
+            end
+        end)
+    until not fruitObj.Parent or not handle.Parent or (os.clock() - startTime > 2)
+    
+    return true
+end
+local function scanAndProcessFruits()
+    if isTeleporting or isTweening then return false end
+    
+    local collectedList = {}
+    
+    pcall(function()
+        local fruitSpawnsFolder = Workspace:FindFirstChild("FruitSpawns")
+        local dropsFolder = Workspace:FindFirstChild("Drops")
+        local evaluatedObjects = {}
+        
+        local function evaluateAndAdd(item, isDrop)
+            if evaluatedObjects[item] then return end
+            if item:IsA("Tool") and item:FindFirstChild("Handle") then
+                local name = item.Name
+                if not isBlacklisted(name) and string.find(name, "Fruit") then
+                    evaluatedObjects[item] = true
                     table.insert(collectedList, {
                         obj = item,
                         name = name,
@@ -601,6 +809,13 @@ local function scanAndProcessFruits()
         local targetData = collectedList[1]
         local targetObj = targetData.obj
         
+        local fruitPosition = Vector3.new(0, 0, 0)
+        pcall(function()
+            if targetObj and targetObj:FindFirstChild("Handle") then
+                fruitPosition = targetObj.Handle.Position
+            end
+        end)
+        
         if targetData.priority == 0 then
             if FruitStatusBox then FruitStatusBox:SetDesc(targetData.name) end
         else
@@ -613,13 +828,6 @@ local function scanAndProcessFruits()
             end
         end
         
-        local fruitPosition = Vector3.new(0, 0, 0)
-        pcall(function()
-            if targetObj and targetObj:FindFirstChild("Handle") then
-                fruitPosition = targetObj.Handle.Position
-            end
-        end)
-
         local storeResult = advancedStoreFruit(targetObj)
         
         if storeResult == "Full" then
