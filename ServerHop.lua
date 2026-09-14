@@ -3,24 +3,15 @@ local TeleportService = game:GetService("TeleportService")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
-local BloxFruitsPlaceIds = {
-    [2753915549] = "First Sea",
-    [4442272183] = "Second Sea",
-    [7449423635] = "Third Sea"
-}
-
 local HopModule = {}
 
-function HopModule.IsBloxFruits()
-    return BloxFruitsPlaceIds[game.PlaceId] ~= nil
-end
-
 function HopModule.Hop()
-    if not HopModule.IsBloxFruits() then return end
+    local currentPlaceId = game.PlaceId
+    if currentPlaceId == 0 then return end
     
     local servers = {}
     local success = pcall(function()
-        local url = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"
+        local url = "https://games.roblox.com/v1/games/" .. currentPlaceId .. "/servers/Public?sortOrder=Asc&limit=100"
         local response = HttpService:JSONDecode(game:HttpGet(url))
         
         if response and response.data then
@@ -35,11 +26,11 @@ function HopModule.Hop()
     if success and #servers > 0 then
         local targetServerId = servers[math.random(1, #servers)]
         pcall(function()
-            TeleportService:TeleportToPlaceInstance(game.PlaceId, targetServerId, LocalPlayer)
+            TeleportService:TeleportToPlaceInstance(currentPlaceId, targetServerId, LocalPlayer)
         end)
     else
         pcall(function()
-            TeleportService:Teleport(game.PlaceId, LocalPlayer)
+            TeleportService:Teleport(currentPlaceId, LocalPlayer)
         end)
     end
 end
