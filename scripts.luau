@@ -4,12 +4,10 @@ local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local HttpService = game:GetService("HttpService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local TeleportService = game:GetService("TeleportService")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local StarterGui = game:GetService("StarterGui")
 local LocalPlayer = Players.LocalPlayer
-local PlaceId = game.PlaceId
 
 local isTeleporting = false
 local isTweening = false
@@ -17,6 +15,31 @@ local currentTween = nil
 local noclipConnection = nil
 local isStoring = false
 local CommF_Cache = nil
+
+local FruitStore = {
+    FruitTiers = {
+        ["Kitsune"] = "Mythical",
+        ["Dragon"] = "Mythical",
+        ["Gas"] = "Mythical",
+        ["Leopard"] = "Mythical",
+        ["Dough"] = "Mythical",
+        ["Tiger"] = "Mythical",
+        ["Yeti"] = "Mythical",
+        ["Spirit"] = "Mythical",
+        ["Control"] = "Mythical",
+        ["Venom"] = "Mythical",
+        ["Shadow"] = "Mythical",
+        ["Mammoth"] = "Mythical",
+        ["T-Rex"] = "Mythical",
+        
+        ["Buddha"] = "Legendary",
+        ["Blizzard"] = "Legendary",
+        ["Portal"] = "Legendary",
+        ["Sound"] = "Legendary",
+    },
+    LastStoreTick = 0,
+    Cooldown = 1.0
+}
 
 local ExternalConfig = getgenv().KaitunFruit or {}
 
@@ -210,34 +233,16 @@ local function getCommF()
     return CommF_Cache
 end
 
-local function startNoclip()
-    if noclipConnection then return end
-    noclipConnection = RunService.Stepped:Connect(function()
-        local character = LocalPlayer.Character
-        if character then
-            for _, part in ipairs(character:GetDescendants()) do
-                if part:IsA("BasePart") then
-                    part.CanCollide = false
-                end
-            end
-        end
-    end)
-end
-
-local function stopNoclip()
-    if noclipConnection then
-        noclipConnection:Disconnect()
-        noclipConnection = nil
-    end
-end
-
 local function cancelTween()
     if currentTween then
         pcall(function() currentTween:Cancel() end)
         currentTween = nil
     end
     isTweening = false
-    stopNoclip()
+    if noclipConnection then
+        noclipConnection:Disconnect()
+        noclipConnection = nil
+    end
 end
 
 local function optimizedTweenTo(targetCFrame)
@@ -425,10 +430,18 @@ local function advancedStoreFruit(fruitObj)
     local fruitName = fruitObj.Name
     local resultStatus = false
     
+    if tick() - FruitStore.LastStoreTick < FruitStore.Cooldown then
+        task.wait(FruitStore.Cooldown)
+    end
+    FruitStore.LastStoreTick = tick()
+    
     pcall(function()
         if fruitObj:IsA("Tool") and fruitObj.Parent ~= LocalPlayer.Character then
-            LocalPlayer.Character.Humanoid:EquipTool(fruitObj)
-            task.wait(0.2)
+            local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                humanoid:EquipTool(fruitObj)
+                task.wait(0.2)
+            end
         end
     end)
     
@@ -471,7 +484,7 @@ local function collectDroppedFruitInstant(fruitObj)
     local handle = fruitObj.Handle
     
     if ScriptStatusBox then 
-        ScriptStatusBox:SetDesc("Collect fruit dropped: " + fruitObj.Name) 
+        ScriptStatusBox:SetDesc("Collect fruit dropped: " .. tostring(fruitObj.Name)) 
     end
     
     local startTime = os.clock()
