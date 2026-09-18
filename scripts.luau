@@ -36,7 +36,7 @@ local Config = {
             Url = LoadedConfig.WebhookStoreFruit and LoadedConfig.WebhookStoreFruit.Url or ""
         },
         UsingHopApi = ExternalConfig.UsingHopApi ~= nil and ExternalConfig.UsingHopApi or true,
-        HopDelay = LoadedConfig.HopDelay or 5,
+        HopDelay = LoadedConfig.HopDelay or 3,
         TweenSpeed = LoadedConfig.TweenSpeed or 190,
         AutoStore = LoadedConfig.AutoStore ~= nil and LoadedConfig.AutoStore or true,
         FixLagEnabled = LoadedConfig.FixLagEnabled ~= nil and LoadedConfig.FixLagEnabled or true,
@@ -148,7 +148,7 @@ end)
 Tabs.Configuration:AddInput("HopDelay", {
     Title = "Hop Delay",
     Default = tostring(Config.Settings.HopDelay),
-    Placeholder = "5",
+    Placeholder = "3",
     Numeric = true,
     Finished = true,
     Callback = function(Value)
@@ -671,7 +671,6 @@ local function scanAndProcessFruits()
         
         if storeResult == "Full" then
             if ScriptStatusBox then ScriptStatusBox:SetDesc("Inventory Full or Already Owned!") end
-            showGameNotification("Blox Fruits", "You already max out this fruit or your inventory is full!", 5)
             
             showFruitNotification(targetData.name)
             task.wait(1)
@@ -680,7 +679,6 @@ local function scanAndProcessFruits()
             return true
         else
             if ScriptStatusBox then ScriptStatusBox:SetDesc("Fruit Stored Successfully!") end
-            showGameNotification("Blox Fruits", "Successfully stored " .. targetData.name .. "!", 5)
             
             task.spawn(function()
                 sendWebhook(targetData.name, fruitPosition, targetData.isDrop and "Drop" or "ServerSpawn")
@@ -723,7 +721,7 @@ task.spawn(function()
                 ScriptStatusBox:SetDesc("Waiting to Hop...")
                 timeWithoutFruit = timeWithoutFruit + 2
                 
-                if timeWithoutFruit >= (Config.Settings.HopDelay or 5) then
+                if timeWithoutFruit >= (Config.Settings.HopDelay or 3) then
                     ScriptStatusBox:SetDesc("Hopping to a new server...")
                     showFruitNotification("Fruits")
                     task.wait(1)
