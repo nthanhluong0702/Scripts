@@ -372,28 +372,44 @@ local function selectTeam()
 end
 
 local function HopServer()
-    if not Config.UsingHopApi then return end
+    if not Config.Settings.UsingHopApi then return end
     local PlaceId = game.PlaceId
     local Servers = {}
     local Cursor = ""
     
-    local success = pcall(function()
+    local success, err = pcall(function()
         repeat
-            local Url = "https://games.roblox.com/v1/games/"..PlaceId.."/servers/Public?sortOrder=Asc&limit=100" .. (Cursor ~= "" and "&cursor="..Cursor or "")
+            local Url = "https://games.roblox.com/v1/games/" .. PlaceId .. "/servers/Public?sortOrder=Asc&limit=100" .. (Cursor ~= "" and "&cursor=" .. Cursor or "")
             local Response = HttpService:JSONDecode(game:HttpGet(Url))
-            Cursor = Response.nextPageCursor
-            for _, v in ipairs(Response.data) do
-                if v.playing < v.maxPlayers and v.id ~= game.JobId then
-                    table.insert(Servers, v.id)
+            
+            if Response and Response.data then
+                Cursor = Response.nextPageCursor
+                for _, v in ipairs(Response.data) do
+                    if type(v) == "table" and v.playing and v.maxPlayers and v.id then
+                        if v.playing < v.maxPlayers and v.id ~= game.JobId then
+                            table.insert(Servers, v.id)
+                        end
+                    end
                 end
+            else
+                break
             end
-        until #Servers > 0 or not Cursor
+        until #Servers > 0 or not Cursor or Cursor == ""
     end)
     
     if success and #Servers > 0 then
         local targetServer = Servers[math.random(1, #Servers)]
-        print("[Kaitun Fruit]: Hopping to a new server...")
+        if ScriptStatusBox then
+            ScriptStatusBox:SetDesc("Hopping to server: " .. tostring(targetServer))
+        end
+        task.wait(0.5)
         TeleportService:TeleportToPlaceInstance(PlaceId, targetServer, LocalPlayer)
+    else
+        if ScriptStatusBox then
+            ScriptStatusBox:SetDesc("Hop API failed, trying normal teleport...")
+        end
+        task.wait(0.5)
+        TeleportService:Teleport(PlaceId, LocalPlayer)
     end
 end
 
