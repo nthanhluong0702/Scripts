@@ -422,15 +422,13 @@ local function showGameNotification(titleText, descText, duration)
     end)
 end
 
-local function showServerHopNotification(fruitName)
+local function showFruitNotification(fruitName)
     local currentJobId = game.JobId
-    pcall(function()
-        StarterGui:SetCore("SendNotification", {
-            Title = "Joining Server Have Fruit",
-            Text = string.format("Fruit Name: %s JobId:\n%s", tostring(fruitName), tostring(currentJobId)),
-            Duration = 6
-        })
-    end)
+    Library:Notify({
+        Title = "Joining Server Have Fruit",
+        Content = string.format("Fruit Name: %s\nJobId: %s", tostring(fruitName), tostring(currentJobId)),
+        Duration = 6
+    })
 end
 
 local function advancedStoreFruit(fruitObj)
@@ -699,7 +697,7 @@ local function scanAndProcessFruits()
             if ScriptStatusBox then ScriptStatusBox:SetDesc("Inventory Full or Already Owned!") end
             showGameNotification("Blox Fruits", "You already max out this fruit or your inventory is full!", 5)
             
-            showServerHopNotification(targetData.name)
+            showFruitNotification(targetData.name)
             task.wait(1)
             isTeleporting = true
             HopServer()
@@ -751,7 +749,7 @@ task.spawn(function()
                 
                 if timeWithoutFruit >= (Config.Settings.HopDelay or 5) then
                     ScriptStatusBox:SetDesc("Hopping to a new server...")
-                    showServerHopNotification("Fruits")
+                    showFruitNotification("Fruits")
                     task.wait(1)
                     isTeleporting = true
                     HopServer()
