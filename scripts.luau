@@ -1,5 +1,3 @@
-local HopModule = loadstring(game:HttpGet("https://raw.githubusercontent.com/nthanhluong0702/Scripts/refs/heads/main/ServerHop.lua"))()
-
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local HttpService = game:GetService("HttpService")
@@ -259,7 +257,7 @@ local function optimizedTweenTo(targetCFrame)
     
     local hrp = LocalPlayer.Character.HumanoidRootPart
     local distance = (hrp.Position - targetCFrame.Position).Magnitude
-    local speed = Config.Settings.TweenSpeed or 190
+    local speed = Config.Settings.TweenSpeed or 180
     local duration = math.max(distance / speed, 0.1)
     
     local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Linear)
@@ -373,6 +371,32 @@ local function selectTeam()
     end)
 end
 
+local function HopServer()
+    if not Config.UsingHopApi then return end
+    local PlaceId = game.PlaceId
+    local Servers = {}
+    local Cursor = ""
+    
+    local success = pcall(function()
+        repeat
+            local Url = "https://games.roblox.com/v1/games/"..PlaceId.."/servers/Public?sortOrder=Asc&limit=100" .. (Cursor ~= "" and "&cursor="..Cursor or "")
+            local Response = HttpService:JSONDecode(game:HttpGet(Url))
+            Cursor = Response.nextPageCursor
+            for _, v in ipairs(Response.data) do
+                if v.playing < v.maxPlayers and v.id ~= game.JobId then
+                    table.insert(Servers, v.id)
+                end
+            end
+        until #Servers > 0 or not Cursor
+    end)
+    
+    if success and #Servers > 0 then
+        local targetServer = Servers[math.random(1, #Servers)]
+        print("[Kaitun Fruit]: Hopping to a new server...")
+        TeleportService:TeleportToPlaceInstance(PlaceId, targetServer, LocalPlayer)
+    end
+end
+
 local blacklistedLookup = nil
 local function getBlacklistLookup()
     if blacklistedLookup then return blacklistedLookup end
@@ -463,7 +487,7 @@ local function collectDroppedFruitInstant(fruitObj)
     local handle = fruitObj.Handle
     
     if ScriptStatusBox then 
-        ScriptStatusBox:SetDesc("Collect fruit dropped: " + fruitObj.Name) 
+        ScriptStatusBox:SetDesc("Collect fruit dropped: " .. fruitObj.Name) 
     end
     
     local startTime = os.clock()
@@ -522,7 +546,7 @@ local function collectServerFruit(fruitObj, fruitName)
         if not fruitObj.Parent or not handle.Parent then break end
         
         if ScriptStatusBox then 
-            ScriptStatusBox:SetDesc("Bypass to " + islandName) 
+            ScriptStatusBox:SetDesc("Bypass to " .. islandName) 
         end
         
         pcall(function()
@@ -678,7 +702,7 @@ local function scanAndProcessFruits()
             showServerHopNotification(targetData.name)
             task.wait(1)
             isTeleporting = true
-            HopModule.Hop()
+            HopServer()
             return true
         else
             if ScriptStatusBox then ScriptStatusBox:SetDesc("Fruit Stored Successfully!") end
@@ -698,12 +722,6 @@ local function scanAndProcessFruits()
 end
 
 Window:SelectTab(1)
-
-Library:Notify({
-    Title = "Fearz Hub Loaded",
-    Content = "Script is running successfully!",
-    Duration = 5
-})
 
 task.spawn(function()
     local seconds = 0
@@ -736,7 +754,7 @@ task.spawn(function()
                     showServerHopNotification("Fruits")
                     task.wait(1)
                     isTeleporting = true
-                    HopModule.Hop()
+                    HopServer()
                 end
             else
                 timeWithoutFruit = 0
