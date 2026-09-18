@@ -1,3 +1,5 @@
+local HopModule = loadstring(game:HttpGet("https://raw.githubusercontent.com/nthanhluong0702/Scripts/refs/heads/main/ServerHop.lua"))()
+
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local HttpService = game:GetService("HttpService")
@@ -371,48 +373,6 @@ local function selectTeam()
     end)
 end
 
-local function HopServer()
-    if not Config.Settings.UsingHopApi then return end
-    local PlaceId = game.PlaceId
-    local Servers = {}
-    local Cursor = ""
-    
-    local success, err = pcall(function()
-        repeat
-            local Url = "https://games.roblox.com/v1/games/" .. PlaceId .. "/servers/Public?sortOrder=Asc&limit=100" .. (Cursor ~= "" and "&cursor=" .. Cursor or "")
-            local Response = HttpService:JSONDecode(game:HttpGet(Url))
-            
-            if Response and Response.data then
-                Cursor = Response.nextPageCursor
-                for _, v in ipairs(Response.data) do
-                    if type(v) == "table" and v.playing and v.maxPlayers and v.id then
-                        if v.playing < v.maxPlayers and v.id ~= game.JobId then
-                            table.insert(Servers, v.id)
-                        end
-                    end
-                end
-            else
-                break
-            end
-        until #Servers > 0 or not Cursor or Cursor == ""
-    end)
-    
-    if success and #Servers > 0 then
-        local targetServer = Servers[math.random(1, #Servers)]
-        if ScriptStatusBox then
-            ScriptStatusBox:SetDesc("Hopping to server: " .. tostring(targetServer))
-        end
-        task.wait(0.5)
-        TeleportService:TeleportToPlaceInstance(PlaceId, targetServer, LocalPlayer)
-    else
-        if ScriptStatusBox then
-            ScriptStatusBox:SetDesc("Hop API failed, trying normal teleport...")
-        end
-        task.wait(0.5)
-        TeleportService:Teleport(PlaceId, LocalPlayer)
-    end
-end
-
 local blacklistedLookup = nil
 local function getBlacklistLookup()
     if blacklistedLookup then return blacklistedLookup end
@@ -716,7 +676,7 @@ local function scanAndProcessFruits()
             showFruitNotification(targetData.name)
             task.wait(1)
             isTeleporting = true
-            HopServer()
+            HopModule.Hop()
             return true
         else
             if ScriptStatusBox then ScriptStatusBox:SetDesc("Fruit Stored Successfully!") end
@@ -768,7 +728,7 @@ task.spawn(function()
                     showFruitNotification("Fruits")
                     task.wait(1)
                     isTeleporting = true
-                    HopServer()
+                    HopModule.Hop()
                 end
             else
                 timeWithoutFruit = 0
