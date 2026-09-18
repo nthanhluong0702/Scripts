@@ -4,29 +4,49 @@ local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
 local LocalPlayer = Players.LocalPlayer
 
-local function HopModule.Hop()
-    if not Config.UsingHopApi then return end
-    local PlaceId = game.PlaceId
-    local Servers = {}
-    local Cursor = ""
-    
-    local success = pcall(function()
-        repeat
-            local Url = "https://games.roblox.com/v1/games/"..PlaceId.."/servers/Public?sortOrder=Asc&limit=100" .. (Cursor ~= "" and "&cursor="..Cursor or "")
-            local Response = HttpService:JSONDecode(game:HttpGet(Url))
-            Cursor = Response.nextPageCursor
-            for _, v in ipairs(Response.data) do
-                if v.playing < v.maxPlayers and v.id ~= game.JobId then
-                    table.insert(Servers, v.id)
-                end
-            end
-        until #Servers > 0 or not Cursor
+local BLOX_FRUITS_ID = 2753915549
+
+function HopModule.Hop()
+  pcall(function()
+        if queue_on_teleport then
+            queue_on_teleport([[
+                task.spawn(function()
+                    repeat task.wait() until game:IsLoaded()
+                end)
+            ]])
+        end
     end)
     
-    if success and #Servers > 0 then
-        local targetServer = Servers[math.random(1, #Servers)]
-        print("[Kaitun Fruit]: Hopping to a new server...")
-        TeleportService:TeleportToPlaceInstance(PlaceId, targetServer, LocalPlayer)
+    local successAPI, response = pcall(function()
+        return game:HttpGet("https://games.roblox.com/v1/games/" .. BLOX_FRUITS_ID .. "/servers/Public?sortOrder=Asc&limit=10")
+    end)
+
+    if successAPI and response then
+        local decoded, data = pcall(function()
+            return HttpService:JSONDecode(response)
+        end)
+        
+        if decoded and data and data.data then
+            for _, server in ipairs(data.data) do
+                if server.playing and server.playing < (server.maxPlayers or 10) and server.id ~= game.JobId then
+                    local teleSuccess = pcall(function()
+                        TeleportService:TeleportToPlaceInstance(BLOX_FRUITS_ID, server.id, LocalPlayer)
+                    end)
+                    if teleSuccess then return end
+                end
+            end
+        end
+    end
+
+    local success = pcall(function()
+        TeleportService:Teleport(BLOX_FRUITS_ID, LocalPlayer)
+    end)
+
+    if not success then
+        task.wait(2)
+        pcall(function()
+            TeleportService:Teleport(BLOX_FRUITS_ID, LocalPlayer)
+        end)
     end
 end
 
