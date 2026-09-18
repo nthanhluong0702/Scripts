@@ -412,15 +412,6 @@ local function showServerHopNotification(fruitName)
             Duration = 6
         })
     end)
-    
-    pcall(function()
-        Library:Notify({
-            Title = "Joining Server Have Fruit",
-            Content = string.format("Fruit Name: %s\nJobId: %s", tostring(fruitName), tostring(currentJobId)),
-            Duration = 6
-        })
-    end)
-end
 
 local function advancedStoreFruit(fruitObj)
     if isStoring then return false end
