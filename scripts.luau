@@ -37,7 +37,7 @@ local Config = {
         },
         UsingHopApi = ExternalConfig.UsingHopApi ~= nil and ExternalConfig.UsingHopApi or true,
         HopDelay = LoadedConfig.HopDelay or 5,
-        TweenSpeed = LoadedConfig.TweenSpeed or 180,
+        TweenSpeed = LoadedConfig.TweenSpeed or 190,
         AutoStore = LoadedConfig.AutoStore ~= nil and LoadedConfig.AutoStore or true,
         FixLagEnabled = LoadedConfig.FixLagEnabled ~= nil and LoadedConfig.FixLagEnabled or true,
         BypassTeleport = LoadedConfig.BypassTeleport ~= nil and LoadedConfig.BypassTeleport or true,
@@ -259,7 +259,7 @@ local function optimizedTweenTo(targetCFrame)
     
     local hrp = LocalPlayer.Character.HumanoidRootPart
     local distance = (hrp.Position - targetCFrame.Position).Magnitude
-    local speed = Config.Settings.TweenSpeed or 180
+    local speed = Config.Settings.TweenSpeed or 190
     local duration = math.max(distance / speed, 0.1)
     
     local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Linear)
