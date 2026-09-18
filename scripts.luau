@@ -388,22 +388,12 @@ local function isBlacklisted(fruitName)
     return lookup[fruitName:lower()] == true
 end
 
-local function showGameNotification(titleText, descText, duration)
-    pcall(function()
-        StarterGui:SetCore("SendNotification", {
-            Title = titleText,
-            Text = descText,
-            Duration = duration or 4,
-        })
-    end)
-end
-
 local function showFruitNotification(fruitName)
     local currentJobId = game.JobId
     Library:Notify({
         Title = "Joining Server Have Fruit",
         Content = string.format("Fruit Name: %s\nJobId: %s", tostring(fruitName), tostring(currentJobId)),
-        Duration = 6
+        Duration = 5
     })
 end
 
@@ -671,7 +661,6 @@ local function scanAndProcessFruits()
         
         if storeResult == "Full" then
             if ScriptStatusBox then ScriptStatusBox:SetDesc("Inventory Full or Already Owned!") end
-            
             showFruitNotification(targetData.name)
             task.wait(1)
             isTeleporting = true
@@ -679,7 +668,6 @@ local function scanAndProcessFruits()
             return true
         else
             if ScriptStatusBox then ScriptStatusBox:SetDesc("Fruit Stored Successfully!") end
-            
             task.spawn(function()
                 sendWebhook(targetData.name, fruitPosition, targetData.isDrop and "Drop" or "ServerSpawn")
             end)
@@ -736,5 +724,15 @@ task.spawn(function()
             ScriptStatusBox:SetDesc("Paused (Start is Off)")
             timeWithoutFruit = 0
         end
+    end
+end)
+
+TeleportService.TeleportInitFailed:Connect(function(player, teleportResult, errorMessage)
+    if player == LocalPlayer then
+        warn("Teleport failed: " .. tostring(errorMessage) .. " -> Retrying hop...")
+        task.wait(2)
+        pcall(function()
+            HopModule.Hop()
+        end)
     end
 end)
