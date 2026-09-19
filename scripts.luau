@@ -580,49 +580,53 @@ local function scanAndProcessFruits()
     local collectedList = {}
     
     pcall(function()
-        local fruitSpawnsFolder = Workspace:FindFirstChild("FruitSpawns")
-        local dropsFolder = Workspace:FindFirstChild("Drops")
         local evaluatedObjects = {}
         
-        local function evaluateAndAdd(item, isDrop)
+        local function evaluateAndAdd(item)
             if evaluatedObjects[item] then return end
             if item:IsA("Tool") and item:FindFirstChild("Handle") then
                 local name = item.Name
-                if not isBlacklisted(name) and string.find(name, "Fruit") then
+                if not isBlacklisted(name) and (string.find(name, "Fruit") or string.find(name, "-")) then
                     evaluatedObjects[item] = true
+                    local isDrop = false
                     table.insert(collectedList, {
                         obj = item,
                         name = name,
                         isDrop = isDrop,
-                        priority = isDrop and 1 or 2 
+                        priority = 1
                     })
                 end
             end
         end
         
-        if fruitSpawnsFolder then
-            for _, fruit in ipairs(fruitSpawnsFolder:GetChildren()) do
-                evaluateAndAdd(fruit, false)
-            end
-        end
-        
-        if dropsFolder then
-            for _, fruit in ipairs(dropsFolder:GetChildren()) do
-                evaluateAndAdd(fruit, true)
-            end
-        end
-        
-        for _, obj in ipairs(Workspace:GetChildren()) do
+        for _, obj in ipairs(Workspace:GetDescendants()) do
             if obj:IsA("Tool") and obj:FindFirstChild("Handle") then
-                evaluateAndAdd(obj, obj.Parent == Workspace)
+                local isInBackpackOrChar = false
+                local p = obj.Parent
+                while p and p ~= Workspace do
+                    if p:IsA("Backpack") or (p:IsA("Model") and Players:GetPlayerFromCharacter(p)) then
+                        isInBackpackOrChar = true
+                        break
+                    end
+                    p = p.Parent
+                end
+                
+                if not isInBackpackOrChar then
+                    evaluateAndAdd(obj)
+                end
             end
         end
         
         local backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
         if backpack then
             for _, item in ipairs(backpack:GetChildren()) do
-                if item:IsA("Tool") and string.find(item.Name, "Fruit") and not isBlacklisted(item.Name) then
-                    table.insert(collectedList, {obj = item, name = item.Name, isDrop = false, priority = 0})
+                if item:IsA("Tool") and (string.find(item.Name, "Fruit") or string.find(item.Name, "-")) and not isBlacklisted(item.Name) then
+                    table.insert(collectedList, {
+                        obj = item, 
+                        name = item.Name, 
+                        isDrop = false, 
+                        priority = 0
+                    })
                 end
             end
         end
@@ -638,6 +642,10 @@ local function scanAndProcessFruits()
         local targetData = collectedList[1]
         local targetObj = targetData.obj
         
+        if not targetObj or (targetData.priority > 0 and not targetObj.Parent) then
+            return false
+        end
+        
         local fruitPosition = Vector3.new(0, 0, 0)
         pcall(function()
             if targetObj and targetObj:FindFirstChild("Handle") then
@@ -645,16 +653,12 @@ local function scanAndProcessFruits()
             end
         end)
         
-        if targetData.priority == 0 then
-            if FruitStatusBox then FruitStatusBox:SetDesc(targetData.name) end
-        else
-            if FruitStatusBox then FruitStatusBox:SetDesc(targetData.name) end
-            
-            if targetData.isDrop then
-                collectDroppedFruitInstant(targetObj)
-            else
-                collectServerFruit(targetObj, targetData.name)
-            end
+        if FruitStatusBox then 
+            FruitStatusBox:SetDesc(targetData.name) 
+        end
+        
+        if targetData.priority > 0 then
+            collectDroppedFruitInstant(targetObj)
         end
         
         local storeResult = advancedStoreFruit(targetObj)
@@ -668,8 +672,9 @@ local function scanAndProcessFruits()
             return true
         else
             if ScriptStatusBox then ScriptStatusBox:SetDesc("Fruit Stored Successfully!") end
+            local statusLabel = targetData.isDrop and "Dropped" or "Spawned"
             task.spawn(function()
-                sendWebhook(targetData.name, fruitPosition, targetData.isDrop and "Drop" or "ServerSpawn")
+                sendWebhook(targetData.name, fruitPosition, statusLabel)
             end)
         end
     else
