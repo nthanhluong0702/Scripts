@@ -574,6 +574,35 @@ local function collectServerFruit(fruitObj, fruitName)
     return true
 end
 
+local ValidFruits = {
+    CommonAndLegendary = {
+        "Rocket", "Spin", "Blade", "Spring", "Bomb", "Smoke", "Spike", "Flame", "Falcon", 
+        "Ice", "Sand", "Dark", "Diamond", "Light", "Rubber", "Barrier", "Ghost", "Magma", "Quake",
+        "Buddha", "Portal", "Spider", "Sound", "Phoenix", "Pain", "Blizzard", "Gravity", 
+        "Rumble", "String", "Love", "Lightning", "Creation"
+    },
+    Mythical = {
+        "Dragon", "Kitsune", "Dough", "T-Rex", "Mammoth", "Shadow", "Venom", 
+        "Control", "Spirit", "Gas", "Yeti", "Tiger", "Empyrean Kitsune"
+    }
+}
+
+local function isRealFruit(name)
+    for _, fruitName in ipairs(ValidFruits.Mythical) do
+        if string.find(name, fruitName) then
+            return true, "Mythical"
+        end
+    end
+    
+    for _, fruitName in ipairs(ValidFruits.CommonAndLegendary) do
+        if string.find(name, fruitName) then
+            return true, "CommonOrLegendary"
+        end
+    end
+    
+    return false, nil
+end
+
 local function scanAndProcessFruits()
     if isTeleporting or isTweening then return false end
     
@@ -586,14 +615,18 @@ local function scanAndProcessFruits()
             if evaluatedObjects[item] then return end
             if item:IsA("Tool") and item:FindFirstChild("Handle") then
                 local name = item.Name
-                if not isBlacklisted(name) and (string.find(name, "Fruit") or string.find(name, "-")) then
+                local isFruitValid, fruitCategory = isRealFruit(name)
+                
+                if not isBlacklisted(name) and isFruitValid then
                     evaluatedObjects[item] = true
-                    local isDrop = false
+                    local priorityValue = (fruitCategory == "Mythical") and 1 or 2
+                    
                     table.insert(collectedList, {
                         obj = item,
                         name = name,
-                        isDrop = isDrop,
-                        priority = 1
+                        category = fruitCategory,
+                        isDrop = false,
+                        priority = priorityValue
                     })
                 end
             end
@@ -619,14 +652,30 @@ local function scanAndProcessFruits()
         
         local backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
         if backpack then
+            local function evaluateBackpackItem(item)
+                if item:IsA("Tool") then
+                    local isFruitValid, fruitCategory = isRealFruit(item.Name)
+                    if isFruitValid and not isBlacklisted(item.Name) then
+                        local priorityValue = (fruitCategory == "Mythical") and 1 or 2
+                        table.insert(collectedList, {
+                            obj = item, 
+                            name = item.Name, 
+                            category = fruitCategory,
+                            isDrop = false, 
+                            priority = priorityValue
+                        })
+                    end
+                end
+            end
+
             for _, item in ipairs(backpack:GetChildren()) do
-                if item:IsA("Tool") and (string.find(item.Name, "Fruit") or string.find(item.Name, "-")) and not isBlacklisted(item.Name) then
-                    table.insert(collectedList, {
-                        obj = item, 
-                        name = item.Name, 
-                        isDrop = false, 
-                        priority = 0
-                    })
+                evaluateBackpackItem(item)
+            end
+            
+            local character = LocalPlayer.Character
+            if character then
+                for _, item in ipairs(character:GetChildren()) do
+                    evaluateBackpackItem(item)
                 end
             end
         end
