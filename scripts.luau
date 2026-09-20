@@ -632,34 +632,118 @@ local function scanAndProcessFruits()
             end
         end
         
-        for _, obj in ipairs(Workspace:GetDescendants()) do
-            if obj:IsA("Tool") and obj:FindFirstChild("Handle") then
-                local isInBackpackOrChar = false
-                local p = obj.Parent
-                while p and p ~= Workspace do
-                    if p:IsA("Backpack") or (p:IsA("Model") and Players:GetPlayerFromCharacter(p)) then
-                        isInBackpackOrChar = true
-                        break
-                    end
-                    p = p.Parent
+local ValidFruits = {
+    CommonAndLegendary = {
+        "Rocket", "Spin", "Blade", "Spring", "Bomb", "Smoke", "Spike", "Flame", "Falcon", 
+        "Ice", "Sand", "Dark", "Diamond", "Light", "Rubber", "Barrier", "Ghost", "Magma", "Quake",
+        "Buddha", "Portal", "Spider", "Sound", "Phoenix", "Pain", "Blizzard", "Gravity", 
+        "Rumble", "String", "Love", "Lightning", "Creation"
+    },
+    Mythical = {
+        "Dragon", "Kitsune", "Dough", "T-Rex", "Mammoth", "Shadow", "Venom", 
+        "Control", "Spirit", "Gas", "Yeti", "Tiger", "Empyrean Kitsune"
+    }
+}
+
+local function isRealFruit(name)
+    for _, fruitName in ipairs(ValidFruits.Mythical) do
+        if name == fruitName then
+            return true, "Mythical"
+        end
+    end
+    
+    for _, fruitName in ipairs(ValidFruits.CommonAndLegendary) do
+        if name == fruitName then
+            return true, "CommonOrLegendary"
+        end
+    end
+    
+    return false, nil
+end
+
+local function scanAndProcessFruits()
+    if isTeleporting or isTweening then return false end
+    
+    local collectedList = {}
+    
+    pcall(function()
+        local evaluatedObjects = {}
+        
+        local function evaluateAndAdd(item)
+            if evaluatedObjects[item] then return end
+            if item:IsA("Tool") and item:FindFirstChild("Handle") then
+                local name = item.Name
+                local isFruitValid, fruitCategory = isRealFruit(name)
+                
+                local notBlacked = true
+                if type(isBlacklisted) == "function" then
+                    notBlacked = not isBlacklisted(name)
                 end
                 
-                if not isInBackpackOrChar then
-                    evaluateAndAdd(obj)
+                if notBlacked and isFruitValid then
+                    evaluatedObjects[item] = true
+                    local priorityValue = (fruitCategory == "Mythical") and 1 or 2
+                    
+                    table.insert(collectedList, {
+                        obj = item,
+                        name = name,
+                        category = fruitCategory,
+                        isDrop = false,
+                        priority = priorityValue
+                    })
                 end
             end
+        end
+        
+        local function scanFolder(folder)
+            for _, obj in ipairs(folder:GetChildren()) do
+                if obj:IsA("Tool") and obj:FindFirstChild("Handle") then
+                    local isInBackpackOrChar = false
+                    local p = obj.Parent
+                    while p and p ~= Workspace do
+                        if p:IsA("Backpack") or (p:IsA("Model") and Players:GetPlayerFromCharacter(p)) then
+                            isInBackpackOrChar = true
+                            break
+                        end
+                        p = p.Parent
+                    end
+                    
+                    if not isInBackpackOrChar then
+                        evaluateAndAdd(obj)
+                    end
+                end
+            end
+        end
+        
+        scanFolder(Workspace)
+        
+        local ignoredFolder = Workspace:FindFirstChild("Ignored")
+        if ignoredFolder then
+            scanFolder(ignoredFolder)
+        end
+        
+        local dropsFolder = Workspace:FindFirstChild("Drops")
+        if dropsFolder then
+            scanFolder(dropsFolder)
         end
         
         local backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
         if backpack then
             local function evaluateBackpackItem(item)
                 if item:IsA("Tool") then
-                    local isFruitValid, fruitCategory = isRealFruit(item.Name)
-                    if isFruitValid and not isBlacklisted(item.Name) then
+                    local name = item.Name
+                    local isFruitValid, fruitCategory = isRealFruit(name)
+                    
+                    local notBlacked = true
+                    if type(isBlacklisted) == "function" then
+                        notBlacked = not isBlacklisted(name)
+                    end
+                    
+                    if isFruitValid and notBlacked then
                         local priorityValue = (fruitCategory == "Mythical") and 1 or 2
                         table.insert(collectedList, {
                             obj = item, 
-                            name = item.Name, 
+                            name = name, 
                             category = fruitCategory,
                             isDrop = false, 
                             priority = priorityValue
@@ -706,24 +790,33 @@ local function scanAndProcessFruits()
             FruitStatusBox:SetDesc(targetData.name) 
         end
         
-        if targetData.priority > 0 then
+        if targetData.priority > 0 and type(collectDroppedFruitInstant) == "function" then
             collectDroppedFruitInstant(targetObj)
         end
         
-        local storeResult = advancedStoreFruit(targetObj)
+        local storeResult = "Unknown"
+        if type(advancedStoreFruit) == "function" then
+            storeResult = advancedStoreFruit(targetObj)
+        end
         
         if storeResult == "Full" then
             if ScriptStatusBox then ScriptStatusBox:SetDesc("Inventory Full or Already Owned!") end
-            showFruitNotification(targetData.name)
+            if type(showFruitNotification) == "function" then
+                showFruitNotification(targetData.name)
+            end
             task.wait(1)
             isTeleporting = true
-            HopModule.Hop()
+            if HopModule and type(HopModule.Hop) == "function" then
+                HopModule.Hop()
+            end
             return true
         else
             if ScriptStatusBox then ScriptStatusBox:SetDesc("Fruit Stored Successfully!") end
             local statusLabel = targetData.isDrop and "Dropped" or "Spawned"
             task.spawn(function()
-                sendWebhook(targetData.name, fruitPosition, statusLabel)
+                if type(sendWebhook) == "function" then
+                    sendWebhook(targetData.name, fruitPosition, statusLabel)
+                end
             end)
         end
     else
