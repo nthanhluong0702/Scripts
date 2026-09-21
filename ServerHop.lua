@@ -7,6 +7,7 @@ getgenv().IsCurrentlyHopping = getgenv().IsCurrentlyHopping or false
 
 TeleportService.TeleportInitFailed:Connect(function(player, teleportResult, errorMessage)
     if player == LocalPlayer then
+        task.wait(2)
         getgenv().IsCurrentlyHopping = false
     end
 end)
@@ -18,19 +19,29 @@ function HopModule.Hop()
     getgenv().IsCurrentlyHopping = true
 
     local currentPlaceId = game.PlaceId
-
-    local success = pcall(function()
-        TeleportService:Teleport(currentPlaceId, LocalPlayer)
+    
+    local teleSuccess = false
+    
+    local successOptions, options = pcall(function()
+        local tpOps = Instance.new("TeleportOptions")
+        tpOps.ShouldReserveServer = false
+        return tpOps
     end)
 
-    if not success then
-        task.wait(3)
+    if successOptions and options then
+        pcall(function()
+            TeleportService:TeleportAsync(currentPlaceId, {LocalPlayer}, options)
+            teleSuccess = true
+        end)
+    end
+
+    if not teleSuccess then
         pcall(function()
             TeleportService:Teleport(currentPlaceId, LocalPlayer)
         end)
     end
 
-    task.wait(10)
+    task.wait(15)
     getgenv().IsCurrentlyHopping = false
 end
 
