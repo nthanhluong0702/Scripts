@@ -215,6 +215,27 @@ local function selectTeam()
     end)
 end
 
+local function isInventoryFull(fruitName)
+    local commF = getCommF()
+    if not commF then return false end
+    
+    local isFull = false
+    pcall(function()
+        local inventory = commF:InvokeServer("getInventory")
+        if type(inventory) == "table" then
+            for _, item in ipairs(inventory) do
+                if item.Name and string.find(item.Name, fruitName) then
+                    if item.Count and item.MaxCount and item.Count >= item.MaxCount then
+                        isFull = true
+                    end
+                    break
+                end
+            end
+        end
+    end)
+    return isFull
+end
+
 local function startNoclip()
     if noclipConnection then return end
     noclipConnection = RunService.Stepped:Connect(function()
@@ -530,6 +551,10 @@ local function scanAndProcessFruits()
                 end
                 
                 if notBlacked and isFruitValid then
+                    if isInventoryFull(name) then
+                        return
+                    end
+
                     evaluatedObjects[item] = true
                     local priorityValue = (fruitCategory == "Mythical") and 1 or 2
                     
@@ -553,21 +578,8 @@ local function scanAndProcessFruits()
         if Workspace:FindFirstChild("Drops") then
             for _, obj in ipairs(Workspace.Drops:GetChildren()) do evaluateAndAdd(obj, true) end
         end
-        if Workspace:FindFirstChild("Ignored") then
-            for _, obj in ipairs(Workspace.Ignored:GetChildren()) do evaluateAndAdd(obj, true) end
-        end
         if Workspace then
             for _, obj in ipairs(Workspace:GetChildren()) do evaluateAndAdd(obj, false) end
-        end
-        
-        local backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
-        if backpack then
-            for _, item in ipairs(backpack:GetChildren()) do evaluateAndAdd(item, true) end
-        end
-        
-        local character = LocalPlayer.Character
-        if character then
-            for _, item in ipairs(character:GetChildren()) do evaluateAndAdd(item, true) end
         end
     end)
     
