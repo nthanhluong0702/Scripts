@@ -1,13 +1,5 @@
 local HopModule = loadstring(game:HttpGet("https://raw.githubusercontent.com/nthanhluong0702/Scripts/refs/heads/main/ServerHop.lua"))()
 
-pcall(function()
-    if queue_on_teleport then
-        queue_on_teleport([[
-            repeat task.wait() until game:IsLoaded()
-        ]])
-    end
-end)
-
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local HttpService = game:GetService("HttpService")
@@ -43,7 +35,7 @@ local Config = {
             Url = LoadedConfig.WebhookStoreFruit and LoadedConfig.WebhookStoreFruit.Url or ""
         },
         UsingHopApi = ExternalConfig.UsingHopApi ~= nil and ExternalConfig.UsingHopApi or true,
-        HopDelay = math.max(LoadedConfig.HopDelay or 15, 15),
+        HopDelay = LoadedConfig.HopDelay or 3,
         TweenSpeed = LoadedConfig.TweenSpeed or 190,
         AutoStore = LoadedConfig.AutoStore ~= nil and LoadedConfig.AutoStore or true,
         FixLagEnabled = LoadedConfig.FixLagEnabled ~= nil and LoadedConfig.FixLagEnabled or true,
@@ -63,6 +55,10 @@ end)
 local successUI, Library = pcall(function()
     return loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 end)
+
+if not successUI or not Library then
+    warn("[Kaitun System]: Không thể tải UI Fluent, script sẽ chạy ngầm không giao diện.")
+end
 
 local Window = Library:CreateWindow({
     Title = "Fearz Finder Fruits",
@@ -146,13 +142,13 @@ end)
 Tabs.Configuration:AddInput("HopDelay", {
     Title = "Hop Delay",
     Default = tostring(Config.Settings.HopDelay),
-    Placeholder = "15",
+    Placeholder = "3",
     Numeric = true,
     Finished = true,
     Callback = function(Value)
         local num = tonumber(Value)
         if num then 
-            Config.Settings.HopDelay = math.max(num, 15)
+            Config.Settings.HopDelay = num 
             saveConfigToFile()
         end
     end
@@ -240,13 +236,6 @@ local function isInventoryFull(fruitName)
     return isFull
 end
 
-local function stopNoclip()
-    if noclipConnection then
-        noclipConnection:Disconnect()
-        noclipConnection = nil
-    end
-end
-
 local function startNoclip()
     if noclipConnection then return end
     noclipConnection = RunService.Stepped:Connect(function()
@@ -261,25 +250,11 @@ local function startNoclip()
     end)
 end
 
-local function stopAllMovement()
-    if currentTween then
-        pcall(function() currentTween:Cancel() end)
-        currentTween = nil
+local function stopNoclip()
+    if noclipConnection then
+        noclipConnection:Disconnect()
+        noclipConnection = nil
     end
-    isTweening = false
-    stopNoclip()
-    
-    pcall(function()
-        if LocalPlayer.Character then
-            for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
-                if part:IsA("BasePart") then
-                    part.CanCollide = true
-                    part.Velocity = Vector3.zero
-                    part.RotVelocity = Vector3.zero
-                end
-            end
-        end
-    end)
 end
 
 local function optimizedTweenTo(targetCFrame)
@@ -639,10 +614,8 @@ local function scanAndProcessFruits()
         if storeResult == "Full" then
             if ScriptStatusBox then ScriptStatusBox:SetDesc("Inventory Full or Already Owned!") end
             if type(showFruitNotification) == "function" then showFruitNotification(targetData.name) end
-            
+            task.wait(1)
             isTeleporting = true
-            stopAllMovement()
-            task.wait(1.5)
             if HopModule and type(HopModule.Hop) == "function" then HopModule.Hop() end
             return true
         else
@@ -693,17 +666,12 @@ task.spawn(function()
                 ScriptStatusBox:SetDesc("Waiting to Hop...")
                 timeWithoutFruit = timeWithoutFruit + 2
                 
-                local safeHopDelay = math.max(Config.Settings.HopDelay or 15, 15)
-                
-                if timeWithoutFruit >= safeHopDelay then
-                    isTeleporting = true
-                    stopAllMovement()
+                if timeWithoutFruit >= (Config.Settings.HopDelay or 3) then
                     ScriptStatusBox:SetDesc("Hopping to a new server...")
                     showFruitNotification("Fruits")
-                    task.wait(1.5)
-                    if HopModule and type(HopModule.Hop) == "function" then 
-                        HopModule.Hop() 
-                    end
+                    task.wait(1)
+                    isTeleporting = true
+                    if HopModule and type(HopModule.Hop) == "function" then HopModule.Hop() end
                 end
             else
                 timeWithoutFruit = 0
@@ -718,8 +686,12 @@ end)
 
 TeleportService.TeleportInitFailed:Connect(function(player, teleportResult, errorMessage)
     if player == LocalPlayer then
-        task.wait(3)
+        warn("Teleport thất bại: " .. tostring(errorMessage) .. " -> Thử Hop lại server khác...")
         isTeleporting = false
+        task.wait(1)
+        pcall(function()
+            if HopModule and type(HopModule.Hop) == "function" then HopModule.Hop() end
+        end)
     end
 end)
 
@@ -728,9 +700,13 @@ task.spawn(function()
     while task.wait(1) do
         if isTeleporting then
             stuckTimer = stuckTimer + 1
-            if stuckTimer >= 20 then
+            if stuckTimer >= 15 then
+                warn("[Anti-Stuck]: Phát hiện kẹt Teleport/Server Đầy quá 15s. Đang ép Hop Server mới...")
                 stuckTimer = 0
                 isTeleporting = false
+                pcall(function()
+                    if HopModule and type(HopModule.Hop) == "function" then HopModule.Hop() end
+                end)
             end
         else
             stuckTimer = 0
