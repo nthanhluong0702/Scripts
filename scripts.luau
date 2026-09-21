@@ -236,6 +236,13 @@ local function isInventoryFull(fruitName)
     return isFull
 end
 
+local function stopNoclip()
+    if noclipConnection then
+        noclipConnection:Disconnect()
+        noclipConnection = nil
+    end
+end
+
 local function startNoclip()
     if noclipConnection then return end
     noclipConnection = RunService.Stepped:Connect(function()
@@ -250,11 +257,13 @@ local function startNoclip()
     end)
 end
 
-local function stopNoclip()
-    if noclipConnection then
-        noclipConnection:Disconnect()
-        noclipConnection = nil
+local function stopAllMovement()
+    if currentTween then
+        pcall(function() currentTween:Cancel() end)
+        currentTween = nil
     end
+    isTweening = false
+    stopNoclip()
 end
 
 local function optimizedTweenTo(targetCFrame)
@@ -614,8 +623,10 @@ local function scanAndProcessFruits()
         if storeResult == "Full" then
             if ScriptStatusBox then ScriptStatusBox:SetDesc("Inventory Full or Already Owned!") end
             if type(showFruitNotification) == "function" then showFruitNotification(targetData.name) end
-            task.wait(1)
+            
             isTeleporting = true
+            stopAllMovement()
+            task.wait(0.5)
             if HopModule and type(HopModule.Hop) == "function" then HopModule.Hop() end
             return true
         else
@@ -667,11 +678,14 @@ task.spawn(function()
                 timeWithoutFruit = timeWithoutFruit + 2
                 
                 if timeWithoutFruit >= (Config.Settings.HopDelay or 3) then
+                    isTeleporting = true
+                    stopAllMovement()
                     ScriptStatusBox:SetDesc("Hopping to a new server...")
                     showFruitNotification("Fruits")
-                    task.wait(1)
-                    isTeleporting = true
-                    if HopModule and type(HopModule.Hop) == "function" then HopModule.Hop() end
+                    task.wait(0.5)
+                    if HopModule and type(HopModule.Hop) == "function" then 
+                        HopModule.Hop() 
+                    end
                 end
             else
                 timeWithoutFruit = 0
@@ -686,12 +700,9 @@ end)
 
 TeleportService.TeleportInitFailed:Connect(function(player, teleportResult, errorMessage)
     if player == LocalPlayer then
-        warn("Teleport thất bại: " .. tostring(errorMessage) .. " -> Thử Hop lại server khác...")
+        warn("Teleport thất bại: " .. tostring(errorMessage))
+        task.wait(3)
         isTeleporting = false
-        task.wait(1)
-        pcall(function()
-            if HopModule and type(HopModule.Hop) == "function" then HopModule.Hop() end
-        end)
     end
 end)
 
@@ -700,13 +711,10 @@ task.spawn(function()
     while task.wait(1) do
         if isTeleporting then
             stuckTimer = stuckTimer + 1
-            if stuckTimer >= 15 then
-                warn("[Anti-Stuck]: Phát hiện kẹt Teleport/Server Đầy quá 15s. Đang ép Hop Server mới...")
+            if stuckTimer >= 20 then
+                warn("[Anti-Stuck]: Phát hiện kẹt Teleport. Reset trạng thái...")
                 stuckTimer = 0
                 isTeleporting = false
-                pcall(function()
-                    if HopModule and type(HopModule.Hop) == "function" then HopModule.Hop() end
-                end)
             end
         else
             stuckTimer = 0
