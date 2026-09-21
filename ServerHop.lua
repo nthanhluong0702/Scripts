@@ -1,106 +1,79 @@
 local HopModule = {}
-
 local TeleportService = game:GetService("TeleportService")
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
+local fileName = "HopCache_" .. game.PlaceId .. ".json"
 local visitedServers = {}
-table.insert(visitedServers, game.JobId)
 
-local function prepareForTeleport()
+if isfile and isfile(fileName) then
     pcall(function()
-        if LocalPlayer.Character then
-            for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
-                if part:IsA("BasePart") then
-                    part.CanCollide = true
-                    part.Velocity = Vector3.zero
-                    part.RotVelocity = Vector3.zero
-                end
-            end
-            local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-            if hrp then
-                hrp.Anchored = true
-            end
-        end
+        visitedServers = HttpService:JSONDecode(readfile(fileName))
     end)
 end
 
-local function getPublicServers(cursor)
-    local url = string.format(
-        "https://games.roblox.com/v1/games/%s/servers/0?sortOrder=Asc&limit=100%s",
-        tostring(game.PlaceId),
-        cursor and ("&cursor=" .. cursor) or ""
-    )
-    
-    local success, response = pcall(function()
-        local requestFunc = syn and syn.request or http and http.request or http_request or request
-        if requestFunc then
-            local res = requestFunc({Url = url, Method = "GET"})
-            return HttpService:JSONDecode(res.Body)
-        else
-            return HttpService:JSONDecode(game:HttpGet(url))
-        end
-    end)
-
-    if success and response and response.data then
-        return response.data, response.nextPageCursor
+local function saveVisited(jobId)
+    visitedServers[jobId] = true
+    if writefile then
+        pcall(function()
+            writefile(fileName, HttpService:JSONEncode(visitedServers))
+        end)
     end
-    return nil, nil
 end
 
 function HopModule.Hop()
-    prepareForTeleport()
-    
     pcall(function()
         if queue_on_teleport then
-            queue_on_teleport([[
-                repeat task.wait() until game:IsLoaded()
-            ]])
+            queue_on_teleport("repeat task.wait() until game:IsLoaded()")
         end
     end)
 
-    local targetServerId = nil
     local cursor = ""
-    local attempts = 0
+    local foundServer = nil
     
-    while not targetServerId and attempts < 5 do
-        attempts = attempts + 1
-        local servers, nextCursor = getPublicServers(cursor)
-        cursor = nextCursor
+    for page = 1, 3 do
+        local url = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/0?sortOrder=Desc&limit=100"
+        if cursor ~= "" then
+            url = url .. "&cursor=" .. cursor
+        end
 
-        if servers then
-            for _, server in ipairs(servers) do
-                if type(server) == "table" and server.id then
-                    local id = tostring(server.id)
-                    local playing = tonumber(server.playing) or 0
-                    local maxPlayers = tonumber(server.maxPlayers) or 12
-                    
-                    if id ~= game.JobId and not visitedServers[id] and playing < maxPlayers then
-                        targetServerId = id
-                        table.insert(visitedServers, id)
-                        break
-                    end
+        local success, result = pcall(function()
+            return HttpService:JSONDecode(game:HttpGet(url))
+        end)
+
+        if success and result and result.data then
+            for _, server in ipairs(result.data) do
+                local jobId = tostring(server.id)
+                local playing = tonumber(server.playing)
+                local maxPlayers = tonumber(server.maxPlayers)
+
+                if jobId ~= game.JobId
+                   and not visitedServers[jobId] 
+                   and playing < maxPlayers 
+                   and server.ping 
+                   and server.ping < 300 then
+
+                    foundServer = jobId
+                    break
                 end
             end
+
+            if foundServer then break end
+            cursor = result.nextPageToken or ""
+            if not cursor or cursor == "" then break end
+        else
+            break
         end
-        
-        if not cursor then break end
-        task.wait(0.3)
+        task.wait(0.2)
     end
 
-    if targetServerId then
-        local success, err = pcall(function()
-            TeleportService:TeleportToPlaceInstance(game.PlaceId, targetServerId, LocalPlayer)
-        end)
-        
-        if not success then
-            warn("[HopModule]: Lỗi TeleportDirect, chuyển sang Fallback Mode: " .. tostring(err))
-            task.wait(1)
-            TeleportService:Teleport(game.PlaceId, LocalPlayer)
-        end
+    if foundServer then
+        saveVisited(foundServer)
+        TeleportService:TeleportToPlaceInstance(game.PlaceId, foundServer, LocalPlayer)
     else
-        warn("[HopModule]: Không tìm thấy JobId phù hợp, dùng Random Teleport...")
+        visitedServers = {}
+        if writefile then pcall(function() writefile(fileName, "{}") end) end
         TeleportService:Teleport(game.PlaceId, LocalPlayer)
     end
 end
