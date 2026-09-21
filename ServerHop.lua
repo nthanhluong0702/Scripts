@@ -4,8 +4,6 @@ local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
 local LocalPlayer = Players.LocalPlayer
 
-local BLOX_FRUITS_ID = 2753915549
-
 getgenv().IsCurrentlyHopping = getgenv().IsCurrentlyHopping or false
 
 function HopModule.Hop()
@@ -14,20 +12,24 @@ function HopModule.Hop()
     end
     getgenv().IsCurrentlyHopping = true
 
+    local currentPlaceId = game.PlaceId
+    local currentJobId = game.JobId
+
     local requestFunc = syn and syn.request or http and http.request or http_request or request
     local responseData = nil
 
     pcall(function()
+        local apiUrl = "https://games.roblox.com/v1/games/" .. tostring(currentPlaceId) .. "/servers/Public?sortOrder=Asc&limit=100"
         if requestFunc then
             local res = requestFunc({
-                Url = "https://games.roblox.com/v1/games/" .. BLOX_FRUITS_ID .. "/servers/Public?sortOrder=Asc&limit=100",
+                Url = apiUrl,
                 Method = "GET"
             })
             if res and res.Body then
                 responseData = HttpService:JSONDecode(res.Body)
             end
         else
-            local res = game:HttpGet("https://games.roblox.com/v1/games/" .. BLOX_FRUITS_ID .. "/servers/Public?sortOrder=Asc&limit=100")
+            local res = game:HttpGet(apiUrl)
             if res then
                 responseData = HttpService:JSONDecode(res)
             end
@@ -37,14 +39,14 @@ function HopModule.Hop()
     local teleported = false
     if responseData and responseData.data then
         for _, server in ipairs(responseData.data) do
-            if server.playing and server.playing <= 10 and server.id ~= game.JobId then
+            if server.playing and server.playing <= 10 and server.id ~= currentJobId then
                 local success = pcall(function()
-                    TeleportService:TeleportToPlaceInstance(BLOX_FRUITS_ID, server.id, LocalPlayer)
+                    TeleportService:TeleportToPlaceInstance(currentPlaceId, server.id, LocalPlayer)
                 end)
                 
                 if success then
                     teleported = true
-                    task.wait(10)
+                    task.wait(12)
                     break
                 else
                     task.wait(1)
@@ -55,9 +57,9 @@ function HopModule.Hop()
 
     if not teleported then
         pcall(function()
-            TeleportService:Teleport(BLOX_FRUITS_ID, LocalPlayer)
+            TeleportService:Teleport(currentPlaceId, LocalPlayer)
         end)
-        task.wait(10)
+        task.wait(12)
     end
 
     getgenv().IsCurrentlyHopping = false
