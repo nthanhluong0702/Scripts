@@ -37,7 +37,7 @@ function HopModule.Hop()
     local teleported = false
     if responseData and responseData.data then
         for _, server in ipairs(responseData.data) do
-            if server.playing and server.playing < (server.maxPlayers or 12) and server.id ~= game.JobId then
+            if server.playing and server.playing <= 10 and server.id ~= game.JobId then
                 local success = pcall(function()
                     TeleportService:TeleportToPlaceInstance(BLOX_FRUITS_ID, server.id, LocalPlayer)
                 end)
@@ -46,6 +46,8 @@ function HopModule.Hop()
                     teleported = true
                     task.wait(10)
                     break
+                else
+                    task.wait(1)
                 end
             end
         end
